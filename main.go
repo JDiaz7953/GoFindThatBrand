@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	_ "encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -42,34 +44,65 @@ import (
 /*
 TO DO:
 - Refactor stucts to take the data we want
-- begin building the program to get specifed brands and clothing type 
+- begin building the program to get specifed brands and clothing type
+- get only a specifed brand
+- create function to get a new api key
 
 
 */
 
-type Product struct {
-	Id               int    `json:"id"`
-	BrandName        string `json:"brand_name"`
-	ClothingCatagory string `json:"category_name"`
-	Status           string `json:"active_status"`
-	Slug             string `json:"slug"`
+type Root struct {
+	Results []Results `json:"results,omitempty"`
 }
 
-type Payload struct {
-	PageInfo struct {
-		HasMore string `json:"has_more"`
-		Last    string `json:"last"`
-	} `json:"page_info"`
-	ClothingItems []Product `json:"objects"`
+type Hits struct {
+	Badges       []interface{} `json:"badges,omitempty"`
+	BumpedAt     string        `json:"bumped_at,omitempty"`
+	DesignerName string        `json:"designer_names"`
+	Sold         bool          `json:"sold"`
+}
+
+type Results struct {
+	Hits []Hits `json:"hits,omitempty"`
+}
+
+func readKey(path string) (string, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", nil
+	}
+
+	return strings.TrimSpace(string(b)), nil
 }
 
 func main() {
+	key, err := readKey(`C:\Users\jaide\Documents\Workspace\Projects\GoFindThatBrand\key.txt`)
+	if err != nil{
+		
+		log.Fatal(err)
+	}
 	url := "https://mnrwefss2q-dsn.algolia.net/1/indexes/*/queries"
 
-	// research what newReader does exactly 
-	reqBody := strings.NewReader(`{"requests":[{"indexName":"Listing_by_listing_quality_production","params":"analytics=false&clickAnalytics=false&enableABTest=true&facets=%5B%22badges%22%2C%22category_path%22%2C%22category_size%22%2C%22color%22%2C%22condition%22%2C%22designers.name%22%2C%22location%22%2C%22price_i%22%2C%22strata%22%5D&filters=department%3Amenswear&getRankingInfo=true&highlightPostTag=__%2Fais-highlight__&highlightPreTag=__ais-highlight__&hitsPerPage=40&maxValuesPerFacet=165&numericFilters=%5B%22price_i%3E%3D0%22%2C%22price_i%3C%3D1000000%22%5D&page=0&query=&userToken=fc1d7cf6-5b6b-4d0e-86e5-7c2e8388b325"}]}`)
-	
-	//header.set is explicit in the header that get put in the body 
+	// research what newReader does exactly
+	reqBody := strings.NewReader(
+	`{"requests":[` +
+		`{"indexName":"Listing_by_listing_quality_production","params":"` +
+		`analytics=true&clickAnalytics=true&enableABTest=true` +
+		`&facets=%5B%22badges%22%2C%22category_path%22%2C%22category_size%22%2C%22color%22%2C%22condition%22%2C%22designers.name%22%2C%22location%22%2C%22price_i%22%2C%22strata%22%5D` +
+		`&filters=department%3Amenswear&getRankingInfo=true` +
+		`&highlightPostTag=__%2Fais-highlight__&highlightPreTag=__ais-highlight__` +
+		`&hitsPerPage=40&maxValuesPerFacet=165` +
+		`&numericFilters=%5B%22price_i%3E%3D0%22%2C%22price_i%3C%3D1000000%22%5D` +
+		`&page=1&query=&userToken=fc1d7cf6-5b6b-4d0e-86e5-7c2e8388b325"},` +
+		`{"indexName":"Listing_by_listing_quality_production","params":"` +
+		`analytics=false&clickAnalytics=false&enableABTest=true&facets=price_i` +
+		`&filters=department%3Amenswear&getRankingInfo=true` +
+		`&highlightPostTag=__%2Fais-highlight__&highlightPreTag=__ais-highlight__` +
+		`&hitsPerPage=0&maxValuesPerFacet=165&page=0&query=` +
+		`&userToken=fc1d7cf6-5b6b-4d0e-86e5-7c2e8388b325"}` +
+		`]}`)
+
+	//header.set is explicit in the header that get put in the body
 	req, _ := http.NewRequest("POST", url, reqBody)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1")
 	req.Header.Set("Accept", "*/*")
@@ -78,11 +111,10 @@ func main() {
 	req.Header.Set("Referer", "https://www.grailed.com/")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("x-algolia-application-id", "MNRWEFSS2Q")
-	req.Header.Set("x-algolia-api-key", "apikey")
+	req.Header.Set("x-algolia-api-key", key)
 
 	//Perform the request
 	resp, err := http.DefaultClient.Do(req)
-
 
 	if err != nil {
 		log.Fatal("Unexpected Status Code ", resp.StatusCode)
@@ -91,6 +123,21 @@ func main() {
 
 	resBody, err := io.ReadAll(resp.Body)
 
-	fmt.Print(string(resBody))
+	//After getting readable data it needs to me unmarshaled pointed to the result struct
+	var r Root
+	err = json.Unmarshal(resBody, &r)
+	if err != nil {
+		log.Fatal("Error extracting data")
+	}
+
+	data := r.Results[0]
+	//fmt.Println(r)
+	for _, v := range data.Hits {
+		if v.DesignerName == "Supreme" {
+			fmt.Println(v)
+		}
+	}
+
+	//fmt.Print(string(resBody))
 
 }

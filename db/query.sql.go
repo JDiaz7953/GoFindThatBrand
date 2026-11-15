@@ -12,9 +12,9 @@ import (
 
 const createPosting = `-- name: CreatePosting :exec
 INSERT INTO grailed_postings (
-    id, title, designer_names, department, sold, price, price_drop, image_url
+    id, title, designer_names, department, sold, price, price_drop, image_url, posting_url
 ) VALUES (
-    ?,?,?,?,?,?,?,?
+    ?,?,?,?,?,?,?,?,?
     )
 `
 
@@ -27,6 +27,7 @@ type CreatePostingParams struct {
 	Price         int
 	PriceDrop     sql.NullString
 	ImageUrl      string
+	PostingUrl    string
 }
 
 func (q *Queries) CreatePosting(ctx context.Context, arg CreatePostingParams) error {
@@ -39,6 +40,7 @@ func (q *Queries) CreatePosting(ctx context.Context, arg CreatePostingParams) er
 		arg.Price,
 		arg.PriceDrop,
 		arg.ImageUrl,
+		arg.PostingUrl,
 	)
 	return err
 }

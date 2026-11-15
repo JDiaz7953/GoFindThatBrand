@@ -7,5 +7,6 @@ CREATE TABLE grailed_postings (
 	"price"	INTEGER NOT NULL,
 	"price_drop"	TEXT,
 	"image_url"	TEXT NOT NULL,
+    "posting_url"	TEXT NOT NULL,
 	PRIMARY KEY("id")
 );

@@ -17,4 +17,5 @@ type GrailedPosting struct {
 	Price         int
 	PriceDrop     sql.NullString
 	ImageUrl      string
+	PostingUrl    string
 }

@@ -1,8 +1,8 @@
 package main
 
 import (
-	_ "database/sql"
-
+	"database/sql"
+	_ "github.com/mattn/go-sqlite3" // why is this neede?
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	
 )
 
 /*
@@ -42,7 +43,7 @@ TO DO:
 -  Figure how am i going to ge the median price
 
 
-- Current sprint: Connect it to a database and only input a specifed brand
+- Current sprint: input specifed data
 
 */
 
@@ -56,8 +57,13 @@ func readKey(path string) (string, error) {
 }
 
 func main() {
+
 	//Open database connection
-	//conn, err := sql.Open("sqlite3", "./")
+	conn, err := sql.Open("sqlite3", "./")
+	if err != nil{
+		log.Fatal("Unable to use data source name", err)
+	}
+	defer conn.Close()
 
 	// Reads sessionKey for the program to access Grailed
 	key, err := readKey(`C:\Users\jaide\Documents\Workspace\Projects\GoFindThatBrand\key.txt`)
@@ -65,15 +71,14 @@ func main() {
 
 		log.Fatal(err)
 	}
+	
 
+	//Builds the request with the proper headers to communicate with the site
 	url := "https://mnrwefss2q-dsn.algolia.net/1/indexes/*/queries"
-
-	//header.set is explicit in the header that get put in the body to match the request made to bypass bot check
 	req, _ := requestHandler(url, key)
 
-	//Perform the request
+	//Performs the request to the site
 	resp, err := http.DefaultClient.Do(req)
-
 	if err != nil {
 		log.Fatal("Unexpected Status Code ", resp.StatusCode)
 	}
@@ -83,15 +88,15 @@ func main() {
 
 	//After getting readable data it needs to me unmarshaled pointed to the result struct
 	// build struct with URL to the posting PostingUrl:https://www.grailed.com/listings/<Hit.ID> ---> takes to posting
-	var r Root
-	err = json.Unmarshal(resBody, &r)
+	var root Root
+	err = json.Unmarshal(resBody, &root)
 	if err != nil {
 		log.Fatal("Error extracting data")
 	}
 
 	//create loop to continously go through pages
 
-	data := r.Results[0]
+	data := root.Results[0]
 	//fmt.Println(r)
 	for _, v := range data.Hits {
 		if v.DesignerName == "Supreme" {

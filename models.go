@@ -12,7 +12,7 @@ type Hits struct {
 	Sold         bool   `json:"sold"`
 	Price        int    `json:"price"`
 	PriceDrop    []int  `json:"price_drop"`
-	PostingUrl	 string
+	PostingUrl   string
 
 	CoverPhoto struct {
 		imageUrl string

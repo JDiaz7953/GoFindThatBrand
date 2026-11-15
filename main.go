@@ -1,16 +1,17 @@
 package main
 
 import (
+	"ClotheScrape/db"
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3" // why is this neede?
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
-	
+
+	_ "github.com/mattn/go-sqlite3" // why is this neede?
 )
 
 /*
@@ -43,7 +44,7 @@ TO DO:
 -  Figure how am i going to ge the median price
 
 
-- Current sprint: input specifed data
+- Current sprint: input specifed data into the db
 
 */
 
@@ -60,7 +61,7 @@ func main() {
 
 	//Open database connection
 	conn, err := sql.Open("sqlite3", "./")
-	if err != nil{
+	if err != nil {
 		log.Fatal("Unable to use data source name", err)
 	}
 	defer conn.Close()
@@ -71,7 +72,6 @@ func main() {
 
 		log.Fatal(err)
 	}
-	
 
 	//Builds the request with the proper headers to communicate with the site
 	url := "https://mnrwefss2q-dsn.algolia.net/1/indexes/*/queries"
@@ -84,24 +84,50 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	resBody, err := io.ReadAll(resp.Body)
-
-	//After getting readable data it needs to me unmarshaled pointed to the result struct
-	// build struct with URL to the posting PostingUrl:https://www.grailed.com/listings/<Hit.ID> ---> takes to posting
+	//After getting readable data it needs to me unmarshaled pointed to the result struct to map to the json tags of the models
 	var root Root
+	resBody, err := io.ReadAll(resp.Body)
 	err = json.Unmarshal(resBody, &root)
 	if err != nil {
 		log.Fatal("Error extracting data")
 	}
 
-	//create loop to continously go through pages
-
+	//index [0] is the location of all the postings
 	data := root.Results[0]
-	//fmt.Println(r)
-	for _, v := range data.Hits {
-		if v.DesignerName == "Supreme" {
-			fmt.Println(v)
+
+	//build struct of GrailedPosting
+	var postings []db.GrailedPosting
+
+	for _, h := range data.Hits {
+
+		//Turn price drop into json string to properly place it in the database
+		pd, err := json.Marshal(h.PriceDrop)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if h.DesignerName == "Supreme" {
+			posting := db.GrailedPosting{
+				ID:            h.ID,
+				Title:         h.Title,
+				DesignerNames: h.DesignerName,
+				Department:    h.Department,
+				Sold:          strconv.FormatBool(h.Sold),
+				Price:         h.Price,
+				PriceDrop: sql.NullString{
+					String: string(pd),
+					Valid:  len(h.PriceDrop) > 0,
+				},
+				ImageUrl:   h.CoverPhoto.imageUrl,
+				PostingUrl: "https://www.grailed.com/listings/" + strconv.Itoa(h.ID),
+			}
+
+			postings = append(postings, posting)
+
 		}
 	}
+
+	//store results in the database gonna have to use withtx to process multiple transactions cleanly 
+
 
 }

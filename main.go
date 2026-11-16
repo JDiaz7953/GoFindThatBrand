@@ -33,6 +33,7 @@ import (
 */
 
 /*
+
 TO DO:
  - Connect it to a database and only input a specifed brand
  - flag not a specific clothing item but rather and item of that brand that falls well within the median
@@ -95,7 +96,7 @@ func main() {
 	//index [0] is the location of all the postings
 	data := root.Results[0]
 
-	//build struct of GrailedPosting
+	//builds the struct of GrailedPosting
 	var postings []db.GrailedPosting
 
 	for _, h := range data.Hits {
@@ -112,7 +113,7 @@ func main() {
 				Title:         h.Title,
 				DesignerNames: h.DesignerName,
 				Department:    h.Department,
-				Sold:          strconv.FormatBool(h.Sold),
+				Sold:          strconv.FormatBool(h.Sold), //Sqlite doesnt take bool values so it must be converted to text in order to store it properly 
 				Price:         h.Price,
 				PriceDrop: sql.NullString{
 					String: string(pd),
@@ -127,7 +128,7 @@ func main() {
 		}
 	}
 
-	//store results in the database gonna have to use withtx to process multiple transactions cleanly 
+	//store results in the database gonna have to use withtx to process multiple transactions cleanly and effeciently 
 
 
 }

@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"context"
 
 	_ "github.com/mattn/go-sqlite3" // why is this neede?
 )
@@ -61,7 +62,9 @@ func readKey(path string) (string, error) {
 func main() {
 
 	//Open database connection
+	ctx := context.Background()
 	conn, err := sql.Open("sqlite3", "./")
+	queries := db.New(conn)
 	if err != nil {
 		log.Fatal("Unable to use data source name", err)
 	}
@@ -107,19 +110,20 @@ func main() {
 			log.Fatal(err)
 		}
 
+		imgU := h.CoverPhoto.imageUrl
 		if h.DesignerName == "Supreme" {
 			posting := db.GrailedPosting{
 				ID:            h.ID,
 				Title:         h.Title,
 				DesignerNames: h.DesignerName,
 				Department:    h.Department,
-				Sold:          strconv.FormatBool(h.Sold), //Sqlite doesnt take bool values so it must be converted to text in order to store it properly 
+				Sold:          strconv.FormatBool(h.Sold), //Sqlite doesnt take bool values so it must be converted to text in order to store it properly
 				Price:         h.Price,
 				PriceDrop: sql.NullString{
 					String: string(pd),
 					Valid:  len(h.PriceDrop) > 0,
 				},
-				ImageUrl:   h.CoverPhoto.imageUrl,
+				ImageUrl:   imgU,
 				PostingUrl: "https://www.grailed.com/listings/" + strconv.Itoa(h.ID),
 			}
 
@@ -128,7 +132,10 @@ func main() {
 		}
 	}
 
-	//store results in the database gonna have to use withtx to process multiple transactions cleanly and effeciently 
-
-
+	//store results in the database gonna have to use withtx to process multiple transactions cleanly and effeciently
+	err = bulkInsertPostings(ctx, conn, queries, postings)
+	if err != nil {
+		log.Fatal("Error processing SQL transaction")
+	}
+	
 }

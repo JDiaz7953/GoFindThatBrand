@@ -2,15 +2,16 @@ package main
 
 import (
 	"ClotheScrape/db"
+	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
-	"context"
 
 	_ "github.com/mattn/go-sqlite3" // why is this neede?
 )
@@ -63,7 +64,7 @@ func main() {
 
 	//Open database connection
 	ctx := context.Background()
-	conn, err := sql.Open("sqlite3", "./")
+	conn, err := sql.Open("sqlite3", "./grailed_posting_db.db")
 	queries := db.New(conn)
 	if err != nil {
 		log.Fatal("Unable to use data source name", err)
@@ -100,7 +101,7 @@ func main() {
 	data := root.Results[0]
 
 	//builds the struct of GrailedPosting
-	var postings []db.GrailedPosting
+	var postings []db.GrailedPostingsDb
 
 	for _, h := range data.Hits {
 
@@ -110,12 +111,11 @@ func main() {
 			log.Fatal(err)
 		}
 
-		imgU := h.CoverPhoto.imageUrl
-		if h.DesignerName == "Supreme" {
-			posting := db.GrailedPosting{
+		if h.DesignerNames == "Supreme" {
+			posting := db.GrailedPostingsDb{
 				ID:            h.ID,
 				Title:         h.Title,
-				DesignerNames: h.DesignerName,
+				DesignerNames: h.DesignerNames,
 				Department:    h.Department,
 				Sold:          strconv.FormatBool(h.Sold), //Sqlite doesnt take bool values so it must be converted to text in order to store it properly
 				Price:         h.Price,
@@ -123,7 +123,7 @@ func main() {
 					String: string(pd),
 					Valid:  len(h.PriceDrop) > 0,
 				},
-				ImageUrl:   imgU,
+				ImageUrl:   h.CoverPhoto.ImageUrl,
 				PostingUrl: "https://www.grailed.com/listings/" + strconv.Itoa(h.ID),
 			}
 
@@ -135,7 +135,8 @@ func main() {
 	//store results in the database gonna have to use withtx to process multiple transactions cleanly and effeciently
 	err = bulkInsertPostings(ctx, conn, queries, postings)
 	if err != nil {
-		log.Fatal("Error processing SQL transaction")
+		log.Fatal("Error processing SQL transaction", err)
 	}
-	
+
+	fmt.Println("END")
 }

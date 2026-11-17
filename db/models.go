@@ -8,7 +8,7 @@ import (
 	"database/sql"
 )
 
-type GrailedPosting struct {
+type GrailedPostingsDb struct {
 	ID            int
 	Title         string
 	DesignerNames string

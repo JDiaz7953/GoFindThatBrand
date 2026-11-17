@@ -1,4 +1,4 @@
-CREATE TABLE grailed_postings (
+CREATE TABLE grailed_postings_db (
 	"id"	INTEGER NOT NULL,
 	"title"	TEXT NOT NULL,
 	"designer_names"	TEXT NOT NULL,

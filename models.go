@@ -5,17 +5,17 @@ type Root struct {
 }
 
 type Hits struct {
-	ID           int    `json:"id"`
-	Title        string `json:"title"`
-	DesignerName string `json:"designer_names"`
-	Department   string `json:"department"`
-	Sold         bool   `json:"sold"`
-	Price        int    `json:"price"`
-	PriceDrop    []int  `json:"price_drop"`
-	PostingUrl   string
+	ID            int    `json:"id"`
+	Title         string `json:"title"`
+	DesignerNames string `json:"designer_names"`
+	Department    string `json:"department"`
+	Sold          bool   `json:"sold"`
+	Price         int    `json:"price"`
+	PriceDrop     []int  `json:"price_drop"`
+	PostingUrl    string
 
 	CoverPhoto struct {
-		imageUrl string
+		ImageUrl string `json:"image_url"`
 	} `json:"cover_photo"`
 	// I need those photos in those lisitng cover_photo : {image_url: <url>}
 }

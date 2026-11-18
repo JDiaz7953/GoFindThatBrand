@@ -17,8 +17,8 @@ func bulkInsertPostings(ctx context.Context, conn *sql.DB, queries *db.Queries, 
 	if err != nil {
 		return err
 	}
-
 	defer tx.Rollback()
+
 	qtx := queries.WithTx(tx)
 
 	//run loop that adds each element from db.grailedPosting to the database

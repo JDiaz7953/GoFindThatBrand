@@ -53,6 +53,7 @@ TO DOs:
 Current Task(s):
  - Implement pauses between scrapes to avoid rate limiting 
  - Calculate the Median price of a brand in the database
+ - Figure out how to clean up the reqBody
 
 */
 

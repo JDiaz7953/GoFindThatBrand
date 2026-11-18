@@ -6,14 +6,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	_ "io"
 	"log"
-	_ "net/http"
-	"os"
 	"strconv"
-	"strings"
-
-	_ "github.com/mattn/go-sqlite3" // why is this neede?
+	_ "github.com/mattn/go-sqlite3" 
 )
 
 /*
@@ -38,8 +33,7 @@ import (
 
 TO DO:
  - Connect it to a database and only input a specifed brand (done)
- - go through multiplie pages
-
+ - go through multiplie pages (done)
  - flag not a specific clothing item but rather and item of that brand that falls well within the median
  - those flagged ones get sent to the discord bot
 
@@ -64,24 +58,14 @@ func main() {
 	}
 	defer conn.Close()
 
-	// Reads sessionKey for the program to access Grailed
-	key, err := readKey(`C:\Users\jaide\Documents\Workspace\Projects\GoFindThatBrand\key.txt`)
-	if err != nil {
-
-		log.Fatal(err)
-	}
-
-	//Builds the request with the proper headers to communicate with the site
-	url := "https://mnrwefss2q-dsn.algolia.net/1/indexes/*/queries"
-
-
+	//Partions queries into smaller queries to avoid hitting the 1000 posting limit
 	currentLowPrice, previousHighPrice := 0, 100
 	const maxPrice = 100000
 	for currentLowPrice <= maxPrice {
 		currentHighPrice := currentLowPrice + previousHighPrice
 
-		//Search for the current parameters of the price and page which is zero
-		page0 := requestHandler(url, key, 0, currentLowPrice, currentHighPrice) //Searching the page
+		//Search for the current postings using the starting parameters of the price and page which is zero
+		page0 := searchPostings(0, currentLowPrice, currentHighPrice) //Searching the page
 
 		//If the amount of hits are greater than 1000 and not 0 we divide it to reduce the amount of listings by reducing the price range to filter
 		if page0.NbHits > 1000 && previousHighPrice > 0 {
@@ -94,7 +78,7 @@ func main() {
 
 		//go through all the pages that are available and save em (I know they can all be saved because there are less than 1000 hits)
 		for page := 1; page < page0.NbPages; page++ {
-			saveHits(ctx, queries, conn, requestHandler(url, key, page, currentLowPrice, currentHighPrice).Hits)
+			saveHits(ctx, queries, conn, searchPostings(page, currentLowPrice, currentHighPrice).Hits)
 		}
 
 		//if the hits are less than 500 widen the window
@@ -104,19 +88,8 @@ func main() {
 
 		// move the binary search up one
 		currentLowPrice = currentHighPrice + 1
-
 	}
 
-}
-
-
-func readKey(path string) (string, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", nil
-	}
-
-	return strings.TrimSpace(string(b)), nil
 }
 
 // Takes in the root and narrow it down to using results and hits
@@ -125,6 +98,7 @@ func saveHits(ctx context.Context, queries *db.Queries, conn *sql.DB, hits []Hit
 	//builds the struct of GrailedPosting
 	var postings []db.GrailedPostingsDb
 
+	// Stores each individual posting into the Hit struct
 	for _, h := range hits {
 
 		//Turn price drop into json string to properly place it in the database

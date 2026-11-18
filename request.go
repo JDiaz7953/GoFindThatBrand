@@ -9,12 +9,24 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"os"
 )
 
-func requestHandler(urlToSite, key string, page, currentLowPrice, currentHighPrice int) Results {
+//Search a list of posting based on the query parameter 
+func searchPostings(page, currentLowPrice, currentHighPrice int) Results {
+	
+	key, err := readKey(`C:\Users\jaide\Documents\Workspace\Projects\GoFindThatBrand\key.txt`)
+	if err != nil {
 
+		log.Fatal(err)
+	}
+
+	urlToSite := "https://mnrwefss2q-dsn.algolia.net/1/indexes/*/queries"
+
+	//Sets the price range the program will search from
 	priceRange := url.QueryEscape(fmt.Sprintf(`["price_i>=%d","price_i<=%d"]`, currentLowPrice, currentHighPrice))
 
+	//Query parameters search for specified data i.e brand, type of clothing, ect..
 	reqBody := strings.NewReader(
 		`{"requests":[` +
 			`{"indexName":"Listing_by_listing_quality_production","params":"` +
@@ -34,6 +46,7 @@ func requestHandler(urlToSite, key string, page, currentLowPrice, currentHighPri
 			`&userToken=fc1d7cf6-5b6b-4d0e-86e5-7c2e8388b325"}` +
 			`]}`)
 
+	//Set the headers neccessary in order for the program to access the site 
 	req, _ := http.NewRequest("POST", urlToSite, reqBody)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1")
 	req.Header.Set("Accept", "*/*")
@@ -60,4 +73,14 @@ func requestHandler(urlToSite, key string, page, currentLowPrice, currentHighPri
 	}
 
 	return root.Results[0]
+}
+
+// Reads the API key scraped and stored in the python script
+func readKey(path string) (string, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", nil
+	}
+
+	return strings.TrimSpace(string(b)), nil
 }

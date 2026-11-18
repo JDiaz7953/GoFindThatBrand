@@ -53,15 +53,6 @@ TO DO:
 
 */
 
-func readKey(path string) (string, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", nil
-	}
-
-	return strings.TrimSpace(string(b)), nil
-}
-
 func main() {
 
 	//Open database connection
@@ -82,77 +73,7 @@ func main() {
 
 	//Builds the request with the proper headers to communicate with the site
 	url := "https://mnrwefss2q-dsn.algolia.net/1/indexes/*/queries"
-	//req, _ := requestHandler(url, key, "", "", "")
 
-	//Performs the request to the site
-	//resp, err := http.DefaultClient.Do(req)
-	//if err != nil {
-	//	log.Fatal("Unexpected Status Code ", resp.StatusCode)
-	//}
-	//defer resp.Body.Close()
-
-	//After getting readable data it needs to me unmarshaled pointed to the result struct to map to the json tags of the models
-	//var root Root
-	//resBody, err := io.ReadAll(resp.Body)
-	//err = json.Unmarshal(resBody, &root)
-	//if err != nil {
-	//	log.Fatal("Error extracting data")
-	//}
-
-	//index [0] is the location of all the postings
-	//data := root.Results[0]
-
-	//builds the struct of GrailedPosting
-	//var postings []db.GrailedPostingsDb
-
-	//for _, h := range data.Hits {
-
-	//Turn price drop into json string to properly place it in the database
-	// 	pd, err := json.Marshal(h.PriceDrop)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-
-	// 	if h.DesignerNames == "Supreme" {
-	// 		posting := db.GrailedPostingsDb{
-	// 			ID:            h.ID,
-	// 			Title:         h.Title,
-	// 			DesignerNames: h.DesignerNames,
-	// 			Department:    h.Department,
-	// 			Sold:          strconv.FormatBool(h.Sold), //Sqlite doesnt take bool values so it must be converted to text in order to store it properly
-	// 			Price:         h.Price,
-	// 			PriceDrop: sql.NullString{
-	// 				String: string(pd),
-	// 				Valid:  len(h.PriceDrop) > 0,
-	// 			},
-	// 			ImageUrl:   h.CoverPhoto.ImageUrl,
-	// 			PostingUrl: "https://www.grailed.com/listings/" + strconv.Itoa(h.ID),
-	// 		}
-
-	// 		postings = append(postings, posting)
-
-	// 	}
-	// }
-
-	// //store results in the database gonna have to use withtx to process multiple transactions cleanly and effeciently
-	// err = bulkInsertPostings(ctx, conn, queries, postings)
-	// if err != nil {
-	// 	log.Fatal("Error processing SQL transaction", err)
-	// } else {
-	// 	fmt.Println("SQL Bulk insertion succesful!")
-	// }
-
-	/*
-		//
-
-		---- Looping pages ------
-		- A new request and response needs to be processed everything
-		- the page query number needs to change
-		- only allowed 1000 hits per page I have to bypass this, each query is a range to gather 1000 hits
-		- the solutions is to have a max price and high and low high is how high
-
-
-	*/
 
 	currentLowPrice, previousHighPrice := 0, 100
 	const maxPrice = 100000
@@ -186,6 +107,16 @@ func main() {
 
 	}
 
+}
+
+
+func readKey(path string) (string, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", nil
+	}
+
+	return strings.TrimSpace(string(b)), nil
 }
 
 // Takes in the root and narrow it down to using results and hits

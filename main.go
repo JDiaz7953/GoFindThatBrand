@@ -12,38 +12,47 @@ import (
 )
 
 /*
- ---- What I have so far -----
- - The program will scrape the site for 3 hoursish before needing a new key
-
-
-*/
-
-/*
-	------ Classify as finished When the Following is done -------
-
-	- Pivot into a deal finder take user input before running the program on what exactly what I am looking for or hard code it
-	- connect it to a discord bot
-	- input data to a DB
-	- flag specifed listings probably by criteria
-
+	------ What Should the program do? -------
+	
+	- Scrape grailed site by a specified brand 
+	- Calculate the median price of a brands clothing/appearl 
+	- Use that median value calculated to flag clothing and appearl that falls below the median 
+	- send flagged postings to a discord bot to notify users 
+	- recheck for price changes 
 
 */
 
 /*
 
-TO DO:
- - Connect it to a database and only input a specifed brand (done)
- - go through multiplie pages (done)
- - flag not a specific clothing item but rather and item of that brand that falls well within the median
+
+----------- My Questions -----------
+	- How am i gonna check if an item has reduced in price that is already in my data
+ 	- How am i gonna make the point of the database useful? ----> calculate prices to find the median prices of a specifed brand clothing/appearal and flag "Snipes"
+   	- recheck listings after a certain amount of time?
+	- Figure how am i going to ge the median price
+
+	
+*/
+
+/*
+
+TO DOs:
+ - Implement pauses between scrapes to avoid rate limiting 
+ - Calculate the Median price of a brand in the database
+ - flag the clothing/appearal of a specifed brand that falls below the median 
  - those flagged ones get sent to the discord bot
+ - recheck for price changes and update those price
 
- - How am i gonna check if an item has reduced in price that is already in my data
- - How am i gonna make the point of the database useful?
-   - recheck listings after a certain amount of time?
--  Figure how am i going to ge the median price
+ Optimizations: seaching by a specifed brand lowers the ammount of hits in a query making the scrape work faster 
+ Stretch: Find a way to automate the key renewal 
 
+*/
 
-- Current sprint: input specifed data into the db
+/* 
+
+Current Task(s):
+ - Implement pauses between scrapes to avoid rate limiting 
+ - Calculate the Median price of a brand in the database
 
 */
 

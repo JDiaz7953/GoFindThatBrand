@@ -13,7 +13,7 @@ import (
 )
 
 //Search a list of posting based on the query parameter 
-func searchPostings(page, currentLowPrice, currentHighPrice int) Results {
+func scrapePostings(page, currentLowPrice, currentHighPrice int) Results {
 	
 	key, err := readKey(`C:\Users\jaide\Documents\Workspace\Projects\GoFindThatBrand\key.txt`)
 	if err != nil {

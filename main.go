@@ -22,6 +22,7 @@ import (
 
 */
 
+
 /*
 
 
@@ -33,6 +34,7 @@ import (
 
 	
 */
+
 
 /*
 
@@ -47,6 +49,7 @@ TO DOs:
  Stretch: Find a way to automate the key renewal 
 
 */
+
 
 /* 
 
@@ -75,7 +78,7 @@ func main() {
 		currentHighPrice := currentLowPrice + previousHighPrice
 
 		//Search for the current postings using the starting parameters of the price and page which is zero
-		page0 := searchPostings(0, currentLowPrice, currentHighPrice) //Searching the page
+		page0 := scrapePostings(0, currentLowPrice, currentHighPrice) //Searching the page
 
 		//If the amount of hits are greater than 1000 and not 0 we divide it to reduce the amount of listings by reducing the price range to filter
 		if page0.NbHits > 1000 && previousHighPrice > 0 {
@@ -88,7 +91,7 @@ func main() {
 
 		//go through all the pages that are available and save em (I know they can all be saved because there are less than 1000 hits)
 		for page := 1; page < page0.NbPages; page++ {
-			saveHits(ctx, queries, conn, searchPostings(page, currentLowPrice, currentHighPrice).Hits)
+			saveHits(ctx, queries, conn, scrapePostings(page, currentLowPrice, currentHighPrice).Hits)
 		}
 
 		//if the hits are less than 500 widen the window

@@ -9,6 +9,7 @@ import (
 	"log"
 	"strconv"
 	_ "github.com/mattn/go-sqlite3" 
+	"time"
 )
 
 /*
@@ -39,8 +40,9 @@ import (
 /*
 
 TO DOs:
- - Implement pauses between scrapes to avoid rate limiting 
+ - Implement pauses between scrapes to avoid rate limiting (done)
  - Calculate the Median price of a brand in the database
+ - Display a page of the possible brands that can be searched 
  - flag the clothing/appearal of a specifed brand that falls below the median 
  - those flagged ones get sent to the discord bot
  - recheck for price changes and update those price
@@ -71,6 +73,8 @@ func main() {
 	}
 	defer conn.Close()
 
+	brandName := "Supreme"
+
 	//Partions queries into smaller queries to avoid hitting the 1000 posting limit
 	currentLowPrice, previousHighPrice := 0, 100
 	const maxPrice = 100000
@@ -78,7 +82,7 @@ func main() {
 		currentHighPrice := currentLowPrice + previousHighPrice
 
 		//Search for the current postings using the starting parameters of the price and page which is zero
-		page0 := scrapePostings(0, currentLowPrice, currentHighPrice) //Searching the page
+		page0 := scrapePostings(0, currentLowPrice, currentHighPrice, brandName) //Searching the page
 
 		//If the amount of hits are greater than 1000 and not 0 we divide it to reduce the amount of listings by reducing the price range to filter
 		if page0.NbHits > 1000 && previousHighPrice > 0 {
@@ -91,7 +95,10 @@ func main() {
 
 		//go through all the pages that are available and save em (I know they can all be saved because there are less than 1000 hits)
 		for page := 1; page < page0.NbPages; page++ {
-			saveHits(ctx, queries, conn, scrapePostings(page, currentLowPrice, currentHighPrice).Hits)
+			saveHits(ctx, queries, conn, scrapePostings(page, currentLowPrice, currentHighPrice, brandName).Hits)
+			
+			//Prevents the program from being rate limited by the site 
+			time.Sleep(2 * time.Second)
 		}
 
 		//if the hits are less than 500 widen the window
@@ -102,6 +109,20 @@ func main() {
 		// move the binary search up one
 		currentLowPrice = currentHighPrice + 1
 	}
+
+
+	//After all the data is in the database calculate the median
+
+
+
+
+	//Flag Postings in the db that fall between the median 
+
+
+
+	
+	//Send all flagged postings the database 
+	
 
 }
 

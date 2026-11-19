@@ -13,7 +13,7 @@ import (
 )
 
 //Search a list of posting based on the query parameter 
-func scrapePostings(page, currentLowPrice, currentHighPrice int) Results {
+func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName string) Results {
 	
 	key, err := readKey(`C:\Users\jaide\Documents\Workspace\Projects\GoFindThatBrand\key.txt`)
 	if err != nil {
@@ -26,13 +26,15 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int) Results {
 	//Sets the price range the program will search from
 	priceRange := url.QueryEscape(fmt.Sprintf(`["price_i>=%d","price_i<=%d"]`, currentLowPrice, currentHighPrice))
 
+	brandToScrape := url.QueryEscape(`department:menswear AND designers.name:"` + brandName + `"`) 
+
 	//Query parameters search for specified data i.e brand, type of clothing, ect..
 	reqBody := strings.NewReader(
 		`{"requests":[` +
 			`{"indexName":"Listing_by_listing_quality_production","params":"` +
 			`analytics=true&clickAnalytics=true&enableABTest=true` +
 			`&facets=%5B%22badges%22%2C%22category_path%22%2C%22category_size%22%2C%22color%22%2C%22condition%22%2C%22designers.name%22%2C%22location%22%2C%22price_i%22%2C%22strata%22%5D` +
-			`&filters=department%3Amenswear&getRankingInfo=true` +
+			`&filters=`+ brandToScrape +
 			`&highlightPostTag=__%2Fais-highlight__&highlightPreTag=__ais-highlight__` +
 			`&hitsPerPage=40&maxValuesPerFacet=165` +
 			`&numericFilters=` + priceRange +

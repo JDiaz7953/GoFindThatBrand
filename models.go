@@ -26,5 +26,3 @@ type Results struct {
 	NbPages int    `json:"nbPages"`
 	NbHits  int    `json:"nbHits"`
 }
-
-// Have sqlite calculate the median price then search the db against items that fall below that median price

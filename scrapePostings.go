@@ -17,7 +17,6 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName strin
 	
 	key, err := readKey(`C:\Users\jaide\Documents\Workspace\Projects\GoFindThatBrand\key.txt`)
 	if err != nil {
-
 		log.Fatal(err)
 	}
 
@@ -26,7 +25,7 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName strin
 	//Sets the price range the program will search from
 	priceRange := url.QueryEscape(fmt.Sprintf(`["price_i>=%d","price_i<=%d"]`, currentLowPrice, currentHighPrice))
 
-	brandToScrape := url.QueryEscape(`department:menswear AND designers.name:"` + brandName + `"`) 
+	brandToScrape := url.QueryEscape(`department:menswear AND designers.name:"` + brandName + `" AND category_path:"tops.short_sleeve_shirts"` ) 
 
 	//Query parameters search for specified data i.e brand, type of clothing, ect..
 	reqBody := strings.NewReader(

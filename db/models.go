@@ -20,4 +20,5 @@ type GrailedPostingsDb struct {
 	ImageUrl      string
 	PostingUrl    string
 	NotifiedAt    sql.NullString
+	Flagged       string
 }

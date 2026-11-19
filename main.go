@@ -27,7 +27,7 @@ import (
 /*
 
 
------------ My Questions -----------
+----------- My Notes -----------
 	- How am i gonna check if an item has reduced in price that is already in my data
  	- How am i gonna make the point of the database useful? ----> calculate prices to find the median prices of a specifed brand clothing/appearal and flag "Snipes"
    	- recheck listings after a certain amount of time?
@@ -42,6 +42,8 @@ import (
 TO DOs:
  - Implement pauses between scrapes to avoid rate limiting (done)
  - Calculate the Median price of a brand in the database (done)
+ - Implement the median under a band so it can find less junk (done)
+
  - Display a page of the possible brands that can be searched 
  - flag the clothing/appearal of a specifed brand that falls below the median 
  - those flagged ones get sent to the discord bot
@@ -110,23 +112,20 @@ func main() {
 		currentLowPrice = currentHighPrice + 1
 	}
 
-
-	//After all the data is in the database calculate the median
-	var MedianPrice float64
+	//After all the data is in the database calculate the median and pass the decimal value to medianPrice
 	processMedian, err := queries.CalculateMedianPriceOfBrand(ctx)
 	if err != nil {
 		log.Fatal("Error Processing the price median for the collected postings!", err)
 	}
+	medianPrice := processMedian.Float64
 
-
-
-	//Flag Postings in the db that fall below the median, And then I can use the median returned to filter for all the postings, a median range will be used to avoid junk 
-	// that fall below and update those to flagged only updating the query making no transaction!!
-
-
-
-
-	//Send all flagged postings the database 
+	//Flag Postings in the db that fall below the median (lowMedian and highMedian are used as a band to avoid collecting pure junk postings).
+	lowMedian  := medianPrice * 0.3
+	highMedian := medianPrice * 0.3
+	queries.FlagDeals(ctx, db.FlagDealsParams{
+		Low: lowMedian,
+		High: highMedian,
+	})
 	
 
 }
@@ -155,12 +154,10 @@ func saveHits(ctx context.Context, queries *db.Queries, conn *sql.DB, hits []Hit
 				Category:      h.Catagory,
 				Sold:          strconv.FormatBool(h.Sold), //Sqlite doesnt take bool values so it must be converted to text in order to store it properly
 				Price:         h.Price,
-				PriceDrop: sql.NullString{
-					String: string(pd),
-					Valid:  len(h.PriceDrop) > 0,
-				},
-				ImageUrl:   h.CoverPhoto.ImageUrl,
-				PostingUrl: "https://www.grailed.com/listings/" + strconv.Itoa(h.ID),
+				PriceDrop:     sql.NullString{String: string(pd),Valid:  len(h.PriceDrop) > 0,},
+				ImageUrl:      h.CoverPhoto.ImageUrl,
+				PostingUrl:    "https://www.grailed.com/listings/" + strconv.Itoa(h.ID),
+				Flagged:       strconv.FormatBool(false),
 			}
 
 			postings = append(postings, posting)

@@ -15,6 +15,7 @@ type Hits struct {
 	PriceDrop     []int  `json:"price_drop"`
 	PostingUrl    string
 	Notified_at   string
+	Flagged       bool
 
 	CoverPhoto struct {
 		ImageUrl string `json:"image_url"`

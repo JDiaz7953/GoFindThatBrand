@@ -10,5 +10,6 @@ CREATE TABLE "grailed_postings_db" (
 	"image_url"	TEXT NOT NULL,
 	"posting_url"	TEXT NOT NULL,
 	"notified_at"	TEXT,
+    "flagged"	TEXT NOT NULL,
 	PRIMARY KEY("id")
 );

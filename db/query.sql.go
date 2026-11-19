@@ -29,9 +29,9 @@ func (q *Queries) CalculateMedianPriceOfBrand(ctx context.Context) (sql.NullFloa
 
 const createPosting = `-- name: CreatePosting :exec
 INSERT INTO grailed_postings_db (
-    id, title, designer_names, department, category, sold, price, price_drop, image_url, posting_url
+    id, title, designer_names, department, category, sold, price, price_drop, image_url, posting_url, notified_at, flagged
 ) VALUES (
-    ?,?,?,?,?,?,?,?,?,?
+    ?,?,?,?,?,?,?,?,?,?,?,?
     )
 `
 
@@ -46,6 +46,8 @@ type CreatePostingParams struct {
 	PriceDrop     sql.NullString
 	ImageUrl      string
 	PostingUrl    string
+	NotifiedAt    sql.NullString
+	Flagged       string
 }
 
 func (q *Queries) CreatePosting(ctx context.Context, arg CreatePostingParams) error {
@@ -60,6 +62,24 @@ func (q *Queries) CreatePosting(ctx context.Context, arg CreatePostingParams) er
 		arg.PriceDrop,
 		arg.ImageUrl,
 		arg.PostingUrl,
+		arg.NotifiedAt,
+		arg.Flagged,
 	)
+	return err
+}
+
+const flagDeals = `-- name: FlagDeals :exec
+UPDATE grailed_postings_db
+SET flagged = 'true'
+WHERE price BETWEEN CAST(?1 AS REAL) AND CAST(?2 AS REAL)
+`
+
+type FlagDealsParams struct {
+	Low  float64
+	High float64
+}
+
+func (q *Queries) FlagDeals(ctx context.Context, arg FlagDealsParams) error {
+	_, err := q.db.ExecContext(ctx, flagDeals, arg.Low, arg.High)
 	return err
 }

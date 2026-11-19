@@ -41,7 +41,7 @@ import (
 
 TO DOs:
  - Implement pauses between scrapes to avoid rate limiting (done)
- - Calculate the Median price of a brand in the database
+ - Calculate the Median price of a brand in the database (done)
  - Display a page of the possible brands that can be searched 
  - flag the clothing/appearal of a specifed brand that falls below the median 
  - those flagged ones get sent to the discord bot
@@ -56,7 +56,7 @@ TO DOs:
 /* 
 
 Current Task(s):
- - Implement pauses between scrapes to avoid rate limiting 
+ - Implement pauses between scrapes to avoid rate limiting (done)
  - Calculate the Median price of a brand in the database
  - Figure out how to clean up the reqBody
 
@@ -112,15 +112,20 @@ func main() {
 
 
 	//After all the data is in the database calculate the median
+	var MedianPrice float64
+	processMedian, err := queries.CalculateMedianPriceOfBrand(ctx)
+	if err != nil {
+		log.Fatal("Error Processing the price median for the collected postings!", err)
+	}
+
+
+
+	//Flag Postings in the db that fall below the median, And then I can use the median returned to filter for all the postings, a median range will be used to avoid junk 
+	// that fall below and update those to flagged only updating the query making no transaction!!
 
 
 
 
-	//Flag Postings in the db that fall between the median 
-
-
-
-	
 	//Send all flagged postings the database 
 	
 
@@ -147,6 +152,7 @@ func saveHits(ctx context.Context, queries *db.Queries, conn *sql.DB, hits []Hit
 				Title:         h.Title,
 				DesignerNames: h.DesignerNames,
 				Department:    h.Department,
+				Category:      h.Catagory,
 				Sold:          strconv.FormatBool(h.Sold), //Sqlite doesnt take bool values so it must be converted to text in order to store it properly
 				Price:         h.Price,
 				PriceDrop: sql.NullString{

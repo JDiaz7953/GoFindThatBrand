@@ -9,15 +9,17 @@ type Hits struct {
 	Title         string `json:"title"`
 	DesignerNames string `json:"designer_names"`
 	Department    string `json:"department"`
+	Catagory	  string `json:"category"`
 	Sold          bool   `json:"sold"`
 	Price         int    `json:"price"`
 	PriceDrop     []int  `json:"price_drop"`
 	PostingUrl    string
+	Notified_at   string
 
 	CoverPhoto struct {
 		ImageUrl string `json:"image_url"`
 	} `json:"cover_photo"`
-	// I need those photos in those lisitng cover_photo : {image_url: <url>}
+	
 }
 
 type Results struct {

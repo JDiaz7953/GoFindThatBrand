@@ -10,11 +10,28 @@ import (
 	"database/sql"
 )
 
+const calculateMedianPriceOfBrand = `-- name: CalculateMedianPriceOfBrand :one
+SELECT AVG(price)
+FROM (SELECT price
+    FROM grailed_postings_db
+    ORDER BY price
+    LIMIT 2 - ( SELECT COUNT(price) FROM grailed_postings_db) % 2
+    OFFSET (SELECT (COUNT(price) - 1) / 2
+        FROM grailed_postings_db))
+`
+
+func (q *Queries) CalculateMedianPriceOfBrand(ctx context.Context) (sql.NullFloat64, error) {
+	row := q.db.QueryRowContext(ctx, calculateMedianPriceOfBrand)
+	var avg sql.NullFloat64
+	err := row.Scan(&avg)
+	return avg, err
+}
+
 const createPosting = `-- name: CreatePosting :exec
 INSERT INTO grailed_postings_db (
-    id, title, designer_names, department, sold, price, price_drop, image_url, posting_url
+    id, title, designer_names, department, category, sold, price, price_drop, image_url, posting_url
 ) VALUES (
-    ?,?,?,?,?,?,?,?,?
+    ?,?,?,?,?,?,?,?,?,?
     )
 `
 
@@ -23,6 +40,7 @@ type CreatePostingParams struct {
 	Title         string
 	DesignerNames string
 	Department    string
+	Category      string
 	Sold          string
 	Price         int
 	PriceDrop     sql.NullString
@@ -36,6 +54,7 @@ func (q *Queries) CreatePosting(ctx context.Context, arg CreatePostingParams) er
 		arg.Title,
 		arg.DesignerNames,
 		arg.Department,
+		arg.Category,
 		arg.Sold,
 		arg.Price,
 		arg.PriceDrop,

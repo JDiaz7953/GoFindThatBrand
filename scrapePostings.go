@@ -7,14 +7,15 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
-	"os"
+	"time"
 )
 
-//Search a list of posting based on the query parameter 
+// Search a list of posting based on the query parameter
 func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName string) Results {
-	
+
 	key, err := readKey(`C:\Users\jaide\Documents\Workspace\Projects\GoFindThatBrand\key.txt`)
 	if err != nil {
 		log.Fatal(err)
@@ -25,7 +26,7 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName strin
 	//Sets the price range the program will search from
 	priceRange := url.QueryEscape(fmt.Sprintf(`["price_i>=%d","price_i<=%d"]`, currentLowPrice, currentHighPrice))
 
-	brandToScrape := url.QueryEscape(`department:menswear AND designers.name:"` + brandName + `" AND category_path:"tops.short_sleeve_shirts"` ) 
+	brandToScrape := url.QueryEscape(`department:menswear AND designers.name:"` + brandName + `" AND category_path:"tops.short_sleeve_shirts"`)
 
 	//Query parameters search for specified data i.e brand, type of clothing, ect..
 	reqBody := strings.NewReader(
@@ -33,7 +34,7 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName strin
 			`{"indexName":"Listing_by_listing_quality_production","params":"` +
 			`analytics=true&clickAnalytics=true&enableABTest=true` +
 			`&facets=%5B%22badges%22%2C%22category_path%22%2C%22category_size%22%2C%22color%22%2C%22condition%22%2C%22designers.name%22%2C%22location%22%2C%22price_i%22%2C%22strata%22%5D` +
-			`&filters=`+ brandToScrape +
+			`&filters=` + brandToScrape +
 			`&highlightPostTag=__%2Fais-highlight__&highlightPreTag=__ais-highlight__` +
 			`&hitsPerPage=40&maxValuesPerFacet=165` +
 			`&numericFilters=` + priceRange +
@@ -47,7 +48,7 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName strin
 			`&userToken=fc1d7cf6-5b6b-4d0e-86e5-7c2e8388b325"}` +
 			`]}`)
 
-	//Set the headers neccessary in order for the program to access the site 
+	//Set the headers neccessary in order for the program to access the site
 	req, _ := http.NewRequest("POST", urlToSite, reqBody)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1")
 	req.Header.Set("Accept", "*/*")
@@ -57,6 +58,9 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName strin
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("x-algolia-application-id", "MNRWEFSS2Q")
 	req.Header.Set("x-algolia-api-key", key)
+
+	//Further delay to prevent rate limiting from occuring
+	time.Sleep(2 * time.Second)
 
 	//Performs the request to the site
 	resp, err := http.DefaultClient.Do(req)
@@ -70,7 +74,7 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName strin
 	resBody, err := io.ReadAll(resp.Body)
 	err = json.Unmarshal(resBody, &root)
 	if err != nil {
-		log.Fatal("Error extracting data")
+		log.Fatal("Error extracting data", err)
 	}
 
 	return root.Results[0]

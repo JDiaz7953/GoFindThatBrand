@@ -9,7 +9,7 @@ type Hits struct {
 	Title         string `json:"title"`
 	DesignerNames string `json:"designer_names"`
 	Department    string `json:"department"`
-	Catagory	  string `json:"category"`
+	Catagory      string `json:"category"`
 	Sold          bool   `json:"sold"`
 	Price         int    `json:"price"`
 	PriceDrop     []int  `json:"price_drop"`
@@ -20,12 +20,16 @@ type Hits struct {
 	CoverPhoto struct {
 		ImageUrl string `json:"image_url"`
 	} `json:"cover_photo"`
-	
 }
 
 type Results struct {
-	Hits    []Hits `json:"hits,omitempty"`
-	Page    int    `json:"page"`
-	NbPages int    `json:"nbPages"`
-	NbHits  int    `json:"nbHits"`
+	Hits       []Hits `json:"hits,omitempty"`
+	Page       int    `json:"page"`
+	NbPages    int    `json:"nbPages"`
+	NbHits     int    `json:"nbHits"`
+	FacetStats struct {
+		Price_i struct {
+			Max int `json:"max"`
+		} `json:"price_i"`
+	} `json:"facets_stats"`
 }

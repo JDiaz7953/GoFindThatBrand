@@ -6,36 +6,35 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"strconv"
-	_ "github.com/mattn/go-sqlite3" 
 	"time"
 )
 
 /*
 	------ What Should the program do? -------
-	
-	- Scrape grailed site by a specified brand 
-	- Calculate the median price of a brands clothing/appearl 
-	- Use that median value calculated to flag clothing and appearl that falls below the median 
-	- send flagged postings to a discord bot to notify users 
-	- recheck for price changes 
+
+	- Scrape grailed site by a specified brand (done)..... can be more dynamic
+	- Calculate the median price of a brands clothing/appearl (done)
+	- Use that median value calculated to flag clothing and appearl that falls below the median (done)
+	- send flagged postings to a discord bot to notify users
+	- recheck for price changes
+	- Make filters more dynamic
 
 */
-
 
 /*
 
 
 ----------- My Notes -----------
 	- How am i gonna check if an item has reduced in price that is already in my data
- 	- How am i gonna make the point of the database useful? ----> calculate prices to find the median prices of a specifed brand clothing/appearal and flag "Snipes"
    	- recheck listings after a certain amount of time?
-	- Figure how am i going to ge the median price
+	- How am I going to allow it to scale to other brands -----> Using a queue system that utalizes arry
 
-	
+	 Optimizations: seaching by a specifed brand lowers the ammount of hits in a query making the scrape work faster
+ 	Stretch: Find a way to automate the key renewal
 */
-
 
 /*
 
@@ -44,23 +43,22 @@ TO DOs:
  - Calculate the Median price of a brand in the database (done)
  - Implement the median under a band so it can find less junk (done)
 
- - Display a page of the possible brands that can be searched 
- - flag the clothing/appearal of a specifed brand that falls below the median 
+ - Display a page of the possible brands that can be searched
+ - flag the clothing/appearal of a specifed brand that falls below the median (Done)
  - those flagged ones get sent to the discord bot
  - recheck for price changes and update those price
-
- Optimizations: seaching by a specifed brand lowers the ammount of hits in a query making the scrape work faster 
- Stretch: Find a way to automate the key renewal 
+ - Figure out how to establish using multiple different brands and clothing type
 
 */
 
-
-/* 
-
+/*
 Current Task(s):
- - Implement pauses between scrapes to avoid rate limiting (done)
- - Calculate the Median price of a brand in the database
- - Figure out how to clean up the reqBody
+	- look into deduping ids (x)
+	- Test scraper to collect median and flag postings
+	- Establish a connection with discord bot so it sends listing
+	- Update notify_at
+	- recheck pricing??
+
 
 */
 
@@ -79,15 +77,15 @@ func main() {
 
 	//Partions queries into smaller queries to avoid hitting the 1000 posting limit
 	currentLowPrice, previousHighPrice := 0, 100
-	const maxPrice = 100000
+	maxPrice := scrapePostings(0, 0, 0, brandName).FacetStats.Price_i.Max
 	for currentLowPrice <= maxPrice {
-		currentHighPrice := currentLowPrice + previousHighPrice
+		currentHighPrice := currentLowPrice + previousHighPrice - 1
 
 		//Search for the current postings using the starting parameters of the price and page which is zero
 		page0 := scrapePostings(0, currentLowPrice, currentHighPrice, brandName) //Searching the page
 
 		//If the amount of hits are greater than 1000 and not 0 we divide it to reduce the amount of listings by reducing the price range to filter
-		if page0.NbHits > 1000 && previousHighPrice > 0 {
+		if page0.NbHits > 1000 && previousHighPrice > 1 {
 			previousHighPrice /= 2
 			continue
 		}
@@ -98,8 +96,8 @@ func main() {
 		//go through all the pages that are available and save em (I know they can all be saved because there are less than 1000 hits)
 		for page := 1; page < page0.NbPages; page++ {
 			saveHits(ctx, queries, conn, scrapePostings(page, currentLowPrice, currentHighPrice, brandName).Hits)
-			
-			//Prevents the program from being rate limited by the site 
+
+			//Prevents the program from being rate limited by the site
 			time.Sleep(2 * time.Second)
 		}
 
@@ -120,13 +118,24 @@ func main() {
 	medianPrice := processMedian.Float64
 
 	//Flag Postings in the db that fall below the median (lowMedian and highMedian are used as a band to avoid collecting pure junk postings).
-	lowMedian  := medianPrice * 0.3
-	highMedian := medianPrice * 0.3
-	queries.FlagDeals(ctx, db.FlagDealsParams{
-		Low: lowMedian,
+	lowMedian := medianPrice * 0.3
+	highMedian := medianPrice * 0.6
+	fmt.Println(lowMedian)
+	fmt.Println(highMedian)
+
+	//Flags posting using SQL querying
+	err = queries.FlagDeals(ctx, db.FlagDealsParams{
+		Low:  lowMedian,
 		High: highMedian,
 	})
-	
+	if err != nil {
+		log.Fatal("Error flagging postings", err)
+	}
+
+	//Integrate discord bot to recieve flagged postings
+
+
+
 
 }
 
@@ -154,7 +163,7 @@ func saveHits(ctx context.Context, queries *db.Queries, conn *sql.DB, hits []Hit
 				Category:      h.Catagory,
 				Sold:          strconv.FormatBool(h.Sold), //Sqlite doesnt take bool values so it must be converted to text in order to store it properly
 				Price:         h.Price,
-				PriceDrop:     sql.NullString{String: string(pd),Valid:  len(h.PriceDrop) > 0,},
+				PriceDrop:     sql.NullString{String: string(pd), Valid: len(h.PriceDrop) > 0},
 				ImageUrl:      h.CoverPhoto.ImageUrl,
 				PostingUrl:    "https://www.grailed.com/listings/" + strconv.Itoa(h.ID),
 				Flagged:       strconv.FormatBool(false),

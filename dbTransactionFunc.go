@@ -29,13 +29,13 @@ func bulkInsertPostings(ctx context.Context, conn *sql.DB, queries *db.Queries, 
 			Title:         p.Title,
 			DesignerNames: p.DesignerNames,
 			Department:    p.Department,
-			Category:	   p.Category,
+			Category:      p.Category,
 			Sold:          p.Sold,
 			Price:         p.Price,
 			PriceDrop:     sql.NullString{String: p.PriceDrop.String, Valid: p.PriceDrop.Valid},
 			ImageUrl:      p.ImageUrl,
 			PostingUrl:    p.PostingUrl,
-			Flagged:	   p.Flagged,
+			Flagged:       p.Flagged,
 		}); err != nil {
 			return err
 		}

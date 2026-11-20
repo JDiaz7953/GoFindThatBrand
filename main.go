@@ -15,14 +15,15 @@ import (
 
 /*
 	------ What Should the program do? -------
-
-	- Scrape grailed site by a specified brand (done)..... can be more dynamic
-	- Calculate the median price of a brands clothing/appearl (done)
-	- Use that median value calculated to flag clothing and appearl that falls below the median (done)
+	- automate key renewal
+	- Scrape grailed site by a specified brand and category that rotate on a queue (Important!! makes it a lot more effecient and reliable)
+	- Set cron job to automate on a schedule 
 	- send flagged postings to a discord bot to notify users
 	- recheck for price changes
-	- Make filters more dynamic
 
+	------DONE-----
+	- Calculate the median price of a brands clothing/appearl (done)
+	- Use that median value calculated to flag clothing and appearl that falls below the median (done)
 */
 
 /*
@@ -32,6 +33,7 @@ import (
 	- How am i gonna check if an item has reduced in price that is already in my data
    	- recheck listings after a certain amount of time?
 	- How am I going to allow it to scale to other brands -----> Using a queue system that utalizes arry
+	- Reducing search filters to fit me (Size, brand, category) produces a more effecient program may have to lean towards that 
 
 	 Optimizations: seaching by a specifed brand lowers the ammount of hits in a query making the scrape work faster
  	Stretch: Find a way to automate the key renewal
@@ -44,15 +46,23 @@ TO DOs:
  - those flagged ones get sent to the discord bot
  - recheck for price changes and update those price
  - Figure out how to establish using multiple different brands and clothing type
+ - turn it into a cron job that waits for the key to be written and processes accordingly
 
 */
 
 /*
 Current Task(s):
 	- build function without the range to capture max price for scraping loot 
-	- Establish a connection with discord bot so it sends listing
-	- Update notify_at
+	
+	- Adjust for dynamic filtering for clothing that matters to me such as: Category and Brand
+	- convert for a cron job to repeate on a schedule and send findings to the database 
+	
 	- recheck pricing
+	- Establish a connection with discord bot so it sends listing  Update notify_at (LAST)
+
+	- Spend time developing a solution to bybass cloudlfare bot detection
+		- The function will be built in python, python will get the apikey write it to the key file
+		- the function then has to rerun when they key expires if possible run and get a new key just before it expires 
 
 
 */
@@ -70,7 +80,7 @@ func main() {
 
 	brandName := "Supreme"
 
-	//Partions queries into smaller queries to avoid hitting the 1000 posting limit
+	//Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit 
 	currentLowPrice, priceStep := 0, 100
 	maxPrice := 20000
 	for currentLowPrice <= maxPrice {
@@ -115,8 +125,6 @@ func main() {
 	//Flag Postings in the db that fall below the median (lowMedian and highMedian are used as a band to avoid collecting pure junk postings).
 	lowMedian := math.Ceil(((medianPrice * 0.3) * 100)) / 100
 	highMedian := math.Ceil(((medianPrice * 0.7) * 100)) / 100
-	fmt.Println(lowMedian)
-	fmt.Println(highMedian)
 
 	//Flags posting using SQL querying
 	err = queries.FlagDeals(ctx, db.FlagDealsParams{

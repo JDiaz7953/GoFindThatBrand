@@ -8,6 +8,7 @@ import (
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
+	"math"
 	"strconv"
 	"time"
 )
@@ -39,12 +40,7 @@ import (
 /*
 
 TO DOs:
- - Implement pauses between scrapes to avoid rate limiting (done)
- - Calculate the Median price of a brand in the database (done)
- - Implement the median under a band so it can find less junk (done)
-
  - Display a page of the possible brands that can be searched
- - flag the clothing/appearal of a specifed brand that falls below the median (Done)
  - those flagged ones get sent to the discord bot
  - recheck for price changes and update those price
  - Figure out how to establish using multiple different brands and clothing type
@@ -53,11 +49,10 @@ TO DOs:
 
 /*
 Current Task(s):
-	- look into deduping ids (x)
-	- Test scraper to collect median and flag postings
+	- build function without the range to capture max price for scraping loot 
 	- Establish a connection with discord bot so it sends listing
 	- Update notify_at
-	- recheck pricing??
+	- recheck pricing
 
 
 */
@@ -76,17 +71,17 @@ func main() {
 	brandName := "Supreme"
 
 	//Partions queries into smaller queries to avoid hitting the 1000 posting limit
-	currentLowPrice, previousHighPrice := 0, 100
-	maxPrice := scrapePostings(0, 0, 0, brandName).FacetStats.Price_i.Max
+	currentLowPrice, priceStep := 0, 100
+	maxPrice := 20000
 	for currentLowPrice <= maxPrice {
-		currentHighPrice := currentLowPrice + previousHighPrice - 1
+		currentHighPrice := currentLowPrice + priceStep - 1
 
 		//Search for the current postings using the starting parameters of the price and page which is zero
 		page0 := scrapePostings(0, currentLowPrice, currentHighPrice, brandName) //Searching the page
 
-		//If the amount of hits are greater than 1000 and not 0 we divide it to reduce the amount of listings by reducing the price range to filter
-		if page0.NbHits > 1000 && previousHighPrice > 1 {
-			previousHighPrice /= 2
+		//If the amount of hits are greater than 1000 then reduce the highPrice
+		if page0.NbHits > 1000 && priceStep > 1 {
+			priceStep /= 2
 			continue
 		}
 
@@ -98,12 +93,12 @@ func main() {
 			saveHits(ctx, queries, conn, scrapePostings(page, currentLowPrice, currentHighPrice, brandName).Hits)
 
 			//Prevents the program from being rate limited by the site
-			time.Sleep(2 * time.Second)
+			time.Sleep(3 * time.Second)
 		}
 
 		//if the hits are less than 500 widen the window
 		if page0.NbHits < 500 {
-			previousHighPrice *= 2
+			priceStep *= 2
 		}
 
 		// move the binary search up one
@@ -118,8 +113,8 @@ func main() {
 	medianPrice := processMedian.Float64
 
 	//Flag Postings in the db that fall below the median (lowMedian and highMedian are used as a band to avoid collecting pure junk postings).
-	lowMedian := medianPrice * 0.3
-	highMedian := medianPrice * 0.6
+	lowMedian := math.Ceil(((medianPrice * 0.3) * 100)) / 100
+	highMedian := math.Ceil(((medianPrice * 0.7) * 100)) / 100
 	fmt.Println(lowMedian)
 	fmt.Println(highMedian)
 
@@ -132,10 +127,7 @@ func main() {
 		log.Fatal("Error flagging postings", err)
 	}
 
-	//Integrate discord bot to recieve flagged postings
-
-
-
+	//Integrate discord bot to recieve flagged postings and send them to discord room
 
 }
 

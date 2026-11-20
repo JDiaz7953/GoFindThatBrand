@@ -10,7 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
+	
 )
 
 // Search a list of posting based on the query parameter
@@ -60,7 +60,7 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName strin
 	req.Header.Set("x-algolia-api-key", key)
 
 	//Further delay to prevent rate limiting from occuring
-	time.Sleep(2 * time.Second)
+	// time.Sleep(2 * time.Second)
 
 	//Performs the request to the site
 	resp, err := http.DefaultClient.Do(req)
@@ -75,6 +75,8 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName strin
 	err = json.Unmarshal(resBody, &root)
 	if err != nil {
 		log.Fatal("Error extracting data", err)
+	} else if len(root.Results) == 0 {
+		log.Fatal("Result is 0 Panic will occurr ending program now ")
 	}
 
 	return root.Results[0]

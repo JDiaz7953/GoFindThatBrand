@@ -33,6 +33,12 @@ INSERT INTO grailed_postings_db (
 ) VALUES (
     ?,?,?,?,?,?,?,?,?,?,?,?
     )
+ON CONFLICT(id) DO UPDATE SET
+    title      = excluded.title,
+    price      = excluded.price,
+    price_drop = excluded.price_drop,
+    sold       = excluded.sold,
+    image_url  = excluded.image_url
 `
 
 type CreatePostingParams struct {

@@ -4,7 +4,13 @@ INSERT INTO grailed_postings_db (
     id, title, designer_names, department, category, sold, price, price_drop, image_url, posting_url, notified_at, flagged
 ) VALUES (
     ?,?,?,?,?,?,?,?,?,?,?,?
-    );
+    )
+ON CONFLICT(id) DO UPDATE SET
+    title      = excluded.title,
+    price      = excluded.price,
+    price_drop = excluded.price_drop,
+    sold       = excluded.sold,
+    image_url  = excluded.image_url;
 
 
 -- name: CalculateMedianPriceOfBrand :one

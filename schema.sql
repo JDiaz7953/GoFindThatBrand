@@ -13,3 +13,12 @@ CREATE TABLE "grailed_postings_db" (
     "flagged"	TEXT NOT NULL,
 	PRIMARY KEY("id")
 );
+
+
+CREATE TABLE "scrape_queue" (
+	"id" INTEGER NULL
+	"designer_names" TEXT NOT NULL,
+	"category" TEXT NOT NULL
+	"last_scraped" TEXT
+	PRIMARY KEY("id")
+)

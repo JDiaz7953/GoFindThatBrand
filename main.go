@@ -51,20 +51,13 @@ TO DOs:
 */
 
 /*
-Current Task(s):
-	- build function without the range to capture max price for scraping loot 
+Current Task(s): 
 	
 	- Adjust for dynamic filtering for clothing that matters to me such as: Category and Brand
 	- convert for a cron job to repeate on a schedule and send findings to the database 
 	
 	- recheck pricing
 	- Establish a connection with discord bot so it sends listing  Update notify_at (LAST)
-
-	- Spend time developing a solution to bybass cloudlfare bot detection
-		- The function will be built in python, python will get the apikey write it to the key file
-		- the function then has to rerun when they key expires if possible run and get a new key just before it expires 
-
-
 */
 
 func main() {
@@ -80,9 +73,21 @@ func main() {
 
 	brandName := "Supreme"
 
+	//Initialize queue job with specified filter to rotate between based on when that filter was last scraped
+		// Call scrape postings and extract all the brands and category 
+		
+		// Conditional that filters for the category and brand I want 
+
+		// Store those results in a slice struct from the db package
+
+		// Insert it into the scrape_queue table
+
+		// The table is now ready to process jobs. Note: scrape posting is going to have to be edited to take a category parameter 
+
+
 	//Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit 
 	currentLowPrice, priceStep := 0, 100
-	maxPrice := 20000
+	maxPrice := scrapePostings(0,0,1000000,brandName).FacetStats.Price_i.Max //Captures the max amount for the specifed filter inputted into query 
 	for currentLowPrice <= maxPrice {
 		currentHighPrice := currentLowPrice + priceStep - 1
 
@@ -135,7 +140,8 @@ func main() {
 		log.Fatal("Error flagging postings", err)
 	}
 
-	//Integrate discord bot to recieve flagged postings and send them to discord room
+	// Build queue systems thats able to queue up different filters in rotation, but then how does this effect the median calculated
+	
 
 }
 

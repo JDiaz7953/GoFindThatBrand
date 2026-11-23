@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ClotheScrape/models"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,11 +11,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	
 )
 
 // Search a list of posting based on the query parameter
-func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName string) Results {
+func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName string) models.Results {
 
 	key := "ZTkzZTNkNGMyMTg1NDkzMjQyYmU5Y2Y3OWNiMGFjYzU3NDQzYzQ4ZmVkMjlkZTY2YjU1MGYyN2E3YmE2NmJkMXZhbGlkVW50aWw9MTc5NTI2MDQzNiZ1c2VyVG9rZW49OTYuMjM4LjYzLjE5"
 
@@ -67,7 +67,7 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName strin
 	defer resp.Body.Close()
 
 	//After getting readable data it needs to me unmarshaled pointed to the result struct to map to the json tags of the models
-	var root Root
+	var root models.Root
 	resBody, err := io.ReadAll(resp.Body)
 	err = json.Unmarshal(resBody, &root)
 	if err != nil {

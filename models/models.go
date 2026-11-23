@@ -1,4 +1,4 @@
-package main
+package models
 
 type Root struct {
 	Results []Results `json:"results,omitempty"`

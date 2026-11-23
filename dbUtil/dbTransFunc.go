@@ -1,4 +1,4 @@
-package main
+package dbUtil
 
 import (
 	"ClotheScrape/db"
@@ -10,7 +10,7 @@ import (
 )
 
 // runs a sql transaction to instert all postings in one sql transactions rather than making multiple calls for every instert
-func bulkInsertPostings(ctx context.Context, conn *sql.DB, queries *db.Queries, postings []db.GrailedPostingsDb) error {
+func BulkInsertPostings(ctx context.Context, conn *sql.DB, queries *db.Queries, postings []db.GrailedPostingsDb) error {
 
 	//begin the transaction with error handling and rollback precaution
 	tx, err := conn.Begin()

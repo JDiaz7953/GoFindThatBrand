@@ -6,16 +6,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"math"
-	"net/http"
+	_ "math"
 	"strconv"
-	"time"
-	"strings"
-
-
+	_ "time"
+	_ "embed"
 	_ "github.com/mattn/go-sqlite3"
+
+	"ClotheScrape/dbUtil"
+	"ClotheScrape/models"
 )
 
 /*
@@ -65,6 +64,8 @@ Current Task(s):
 	- Establish a connection with discord bot so it sends listing  Update notify_at (LAST)
 */
 
+//go:embed sql/schema.sql
+var ddl string
 func main() {
 
 	//Open database connection
@@ -74,148 +75,79 @@ func main() {
 	if err != nil {
 		log.Fatal("Unable to use data source name", err)
 	}
+
+	// create tables
+	if _, err := conn.ExecContext(ctx, ddl); err != nil {
+		log.Fatal("error creating tabel", err)
+	}
+
 	defer conn.Close()
 
-	brandName := "Supreme"
+	//brandName := "Supreme"
 
-	//Initialize queue job with specified filter to rotate between based on when that filter was last scraped
+	dbUtil.SeedQueue(ctx, queries)
 
-	// Call scrape postings and extract all the brands and category
+	// //Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit
+	// currentLowPrice, priceStep := 0, 100
+	// maxPrice := scrapePostings(0, 0, 1000000, brandName).FacetStats.Price_i.Max //Captures the max amount for the specifed filter inputted into query
+	// for currentLowPrice <= maxPrice {
+	// 	currentHighPrice := currentLowPrice + priceStep - 1
 
+	// 	//Search for the current postings using the starting parameters of the price and page which is zero
+	// 	page0 := scrapePostings(0, currentLowPrice, currentHighPrice, brandName) //Searching the page
 
-	// Insert it into the scrape_queue table
+	// 	//If the amount of hits are greater than 1000 then reduce the highPrice
+	// 	if page0.NbHits > 1000 && priceStep > 1 {
+	// 		priceStep /= 2
+	// 		continue
+	// 	}
 
-	// The table is now ready to process jobs. Note: scrape posting is going to have to be edited to take a category parameter
+	// 	//if it bypasses the it means that the number of hits found can be collected so we save it
+	// 	saveHits(ctx, queries, conn, page0.Hits)
 
-	//Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit
-	currentLowPrice, priceStep := 0, 100
-	maxPrice := scrapePostings(0, 0, 1000000, brandName).FacetStats.Price_i.Max //Captures the max amount for the specifed filter inputted into query
-	for currentLowPrice <= maxPrice {
-		currentHighPrice := currentLowPrice + priceStep - 1
+	// 	//go through all the pages that are available and save em (I know they can all be saved because there are less than 1000 hits)
+	// 	for page := 1; page < page0.NbPages; page++ {
+	// 		saveHits(ctx, queries, conn, scrapePostings(page, currentLowPrice, currentHighPrice, brandName).Hits)
 
-		//Search for the current postings using the starting parameters of the price and page which is zero
-		page0 := scrapePostings(0, currentLowPrice, currentHighPrice, brandName) //Searching the page
+	// 		//Prevents the program from being rate limited by the site
+	// 		time.Sleep(3 * time.Second)
+	// 	}
 
-		//If the amount of hits are greater than 1000 then reduce the highPrice
-		if page0.NbHits > 1000 && priceStep > 1 {
-			priceStep /= 2
-			continue
-		}
+	// 	//if the hits are less than 500 widen the window
+	// 	if page0.NbHits < 500 {
+	// 		priceStep *= 2
+	// 	}
 
-		//if it bypasses the it means that the number of hits found can be collected so we save it
-		saveHits(ctx, queries, conn, page0.Hits)
+	// 	// move the binary search up one
+	// 	currentLowPrice = currentHighPrice + 1
+	// }
 
-		//go through all the pages that are available and save em (I know they can all be saved because there are less than 1000 hits)
-		for page := 1; page < page0.NbPages; page++ {
-			saveHits(ctx, queries, conn, scrapePostings(page, currentLowPrice, currentHighPrice, brandName).Hits)
+	// //After all the data is in the database calculate the median and pass the decimal value to medianPrice
+	// processMedian, err := queries.CalculateMedianPriceOfBrand(ctx)
+	// if err != nil {
+	// 	log.Fatal("Error Processing the price median for the collected postings!", err)
+	// }
+	// medianPrice := processMedian.Float64
 
-			//Prevents the program from being rate limited by the site
-			time.Sleep(3 * time.Second)
-		}
+	// //Flag Postings in the db that fall below the median (lowMedian and highMedian are used as a band to avoid collecting pure junk postings).
+	// lowMedian := math.Ceil(((medianPrice * 0.3) * 100)) / 100
+	// highMedian := math.Ceil(((medianPrice * 0.7) * 100)) / 100
 
-		//if the hits are less than 500 widen the window
-		if page0.NbHits < 500 {
-			priceStep *= 2
-		}
-
-		// move the binary search up one
-		currentLowPrice = currentHighPrice + 1
-	}
-
-	//After all the data is in the database calculate the median and pass the decimal value to medianPrice
-	processMedian, err := queries.CalculateMedianPriceOfBrand(ctx)
-	if err != nil {
-		log.Fatal("Error Processing the price median for the collected postings!", err)
-	}
-	medianPrice := processMedian.Float64
-
-	//Flag Postings in the db that fall below the median (lowMedian and highMedian are used as a band to avoid collecting pure junk postings).
-	lowMedian := math.Ceil(((medianPrice * 0.3) * 100)) / 100
-	highMedian := math.Ceil(((medianPrice * 0.7) * 100)) / 100
-
-	//Flags posting using SQL querying
-	err = queries.FlagDeals(ctx, db.FlagDealsParams{
-		Low:  lowMedian,
-		High: highMedian,
-	})
-	if err != nil {
-		log.Fatal("Error flagging postings", err)
-	}
-
-	// Build queue systems thats able to queue up different filters in rotation, but then how does this effect the median calculated
+	// //Flags posting using SQL querying
+	// err = queries.FlagDeals(ctx, db.FlagDealsParams{
+	// 	Low:  lowMedian,
+	// 	High: highMedian,
+	// })
+	// if err != nil {
+	// 	log.Fatal("Error flagging postings", err)
+	// }
 
 }
 
-func seedQueue(ctx context.Context, queries *db.Queries) {
-	body := strings.NewReader(`{"requests":[{"indexName":"Listing_by_listing_quality_production","params":"` +
-		`facets=%5B%22designers.name%22%2C%22category_path%22%5D` +
-		`&filters=department%3Amenswear&hitsPerPage=0&maxValuesPerFacet=1000&page=0&query="}]}`)
-	
-	key := "MjhmOTc2MWVjMDVhMGVlMWM0NGYxNWEwOTZjZWFiYjYyNGZhOWE5NjhiMTNhZmJlMmJkODJjNmQ2M2ZjYTQ1YnZhbGlkVW50aWw9MTc5NTQxOTQ5NSZ1c2VyVG9rZW49OTYuMjM4LjYzLjE5"
-	
-	req, _ := http.NewRequest("POST", "https://mnrwefss2q-dsn.algolia.net/1/indexes/*/queries", body)
-	req.Header.Set("Accept", "*/*")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("Origin", "https://www.grailed.com")
-	req.Header.Set("Referer", "https://www.grailed.com/")
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("x-algolia-application-id", "MNRWEFSS2Q")
-	req.Header.Set("x-algolia-api-key", key)
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatal("Unexpected Status Code ", resp.StatusCode)
-	}
-	defer resp.Body.Close()
-
-	var root Root
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal("error filling root table with data")
-	}
-
-	err = json.Unmarshal(respBody, &root)
-	if err != nil {
-		log.Fatal("Failure to insert Queue Seed", err)
-	}
-
-	// Conditional that filters for the category and brand I want, looping through a map
-	var designerNames []string
-	var categories []string
-	
-	facets := root.Results[0].Facets
-	for key := range facets.DesignerNames {
-		designerNames = append(designerNames, key)
-	}
-	for key := range facets.CategoryPath {
-		categories = append(categories, key)
-	}
-	fmt.Println(categories)
-	fmt.Println(designerNames)
-
-	// Store those results in a slice struct from the db package
-	for i := 0; i < len(designerNames); i++ {
-		if designerNames[i] == "Gucci" ||
-			designerNames[i] == "Prada" ||
-			designerNames[i] == "Balenciaga" ||
-			designerNames[i] == "Carhartt" {
-			for j := 0; j < len(categories); j++ {
-				err := queries.InsertFilters(ctx, db.InsertFiltersParams{
-					DesignerNames: designerNames[i],
-					Category:      categories[j],
-				})
-				if err != nil {
-					log.Fatal("Error adding filters to the database", err)
-				}
-			}
-		}
-	}
-
-
-}
 
 // Takes in the root and narrow it down to using results and hits
-func saveHits(ctx context.Context, queries *db.Queries, conn *sql.DB, hits []Hits) {
+func saveHits(ctx context.Context, queries *db.Queries, conn *sql.DB, hits []models.Hits) {
 
 	//builds the struct of GrailedPosting
 	var postings []db.GrailedPostingsDb
@@ -250,7 +182,7 @@ func saveHits(ctx context.Context, queries *db.Queries, conn *sql.DB, hits []Hit
 	}
 
 	//store results in the database gonna have to use withtx to process multiple transactions cleanly and effeciently
-	err := bulkInsertPostings(ctx, conn, queries, postings)
+	err := dbUtil.BulkInsertPostings(ctx, conn, queries, postings)
 	if err != nil {
 		log.Fatal("Error processing SQL transaction", err)
 	} else {

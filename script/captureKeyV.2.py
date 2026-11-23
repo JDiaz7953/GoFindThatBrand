@@ -30,7 +30,7 @@ async def main():
         await page.wait_for_timeout(3000)
         print(captured)
         driver.quit()
-    tmp = KEY_FILE + ".tmp"
+    tmp = KEY_FILE
     
     with open(tmp, "w") as f:
         f.write(captured["apiKey"])

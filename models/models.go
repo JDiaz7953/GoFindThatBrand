@@ -10,6 +10,7 @@ type Hits struct {
 	DesignerNames string `json:"designer_names"`
 	Department    string `json:"department"`
 	Catagory      string `json:"category"`
+	CatagoryPath      string `json:"category_path"`
 	Sold          bool   `json:"sold"`
 	Price         int    `json:"price"`
 	PriceDrop     []int  `json:"price_drop"`

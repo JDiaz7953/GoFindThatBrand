@@ -1,9 +1,9 @@
 
 -- name: CreatePosting :exec
 INSERT INTO grailed_postings_db (
-    id, title, designer_names, department, category, sold, price, price_drop, image_url, posting_url, notified_at, flagged
+    id, title, designer_names, department, category, category_path,sold, price, price_drop, image_url, posting_url, notified_at, flagged
 ) VALUES (
-    ?,?,?,?,?,?,?,?,?,?,?,?
+    ?,?,?,?,?,?,?,?,?,?,?,?,?
     )
 ON CONFLICT(id) DO UPDATE SET
     title      = excluded.title,

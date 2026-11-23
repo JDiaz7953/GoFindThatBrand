@@ -62,9 +62,17 @@ Current Task(s):
 
 	- Adjust for dynamic filtering for clothing that matters to me such as: Category and Brand
 	- convert for a cron job to repeate on a schedule and send findings to the database
-
 	- recheck pricing
 	- Establish a connection with discord bot so it sends listing  Update notify_at (LAST)
+
+	the sql query needs to find a median for the category it scraped and previous scraped itmes or prev flagged items need to 
+	be reevaluated to make sure they are properly marked, then I need to make sure only those items are effected 
+	so add category
+
+	so when the program scrapes its gonna apply the median by filtering by the current brand and categorypath, its going to flag and unflag by the current brand and categorypath
+
+
+
 */
 
 //go:embed sql/schema.sql
@@ -87,6 +95,19 @@ func main() {
 	defer conn.Close()
 
 	brandName := "Supreme"
+	//For loop
+
+	//first I have to get the designerName and the category
+
+	//pass the designerName and category to scrape posting to get the specified categories
+
+	//the loop beings scraping it
+
+	//after the postings been flagged
+
+	//Then mark when that categories job ran 
+
+
 
 
 	//Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit

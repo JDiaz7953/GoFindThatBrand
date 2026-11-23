@@ -4,13 +4,16 @@ import (
 	"ClotheScrape/db"
 	"context"
 	"database/sql"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	_ "math"
 	"strconv"
+	"time"
 	_ "time"
-	_ "embed"
+
 	_ "github.com/mattn/go-sqlite3"
 
 	"ClotheScrape/dbUtil"
@@ -83,64 +86,63 @@ func main() {
 
 	defer conn.Close()
 
-	//brandName := "Supreme"
+	brandName := "Supreme"
 
-	dbUtil.SeedQueue(ctx, queries)
 
-	// //Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit
-	// currentLowPrice, priceStep := 0, 100
-	// maxPrice := scrapePostings(0, 0, 1000000, brandName).FacetStats.Price_i.Max //Captures the max amount for the specifed filter inputted into query
-	// for currentLowPrice <= maxPrice {
-	// 	currentHighPrice := currentLowPrice + priceStep - 1
+	//Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit
+	currentLowPrice, priceStep := 0, 100
+	maxPrice := scrapePostings(0, 0, 1000000, brandName).FacetStats.Price_i.Max //Captures the max amount for the specifed filter inputted into query
+	for currentLowPrice <= maxPrice {
+		currentHighPrice := currentLowPrice + priceStep - 1
 
-	// 	//Search for the current postings using the starting parameters of the price and page which is zero
-	// 	page0 := scrapePostings(0, currentLowPrice, currentHighPrice, brandName) //Searching the page
+		//Search for the current postings using the starting parameters of the price and page which is zero
+		page0 := scrapePostings(0, currentLowPrice, currentHighPrice, brandName) //Searching the page
 
-	// 	//If the amount of hits are greater than 1000 then reduce the highPrice
-	// 	if page0.NbHits > 1000 && priceStep > 1 {
-	// 		priceStep /= 2
-	// 		continue
-	// 	}
+		//If the amount of hits are greater than 1000 then reduce the highPrice
+		if page0.NbHits > 1000 && priceStep > 1 {
+			priceStep /= 2
+			continue
+		}
 
-	// 	//if it bypasses the it means that the number of hits found can be collected so we save it
-	// 	saveHits(ctx, queries, conn, page0.Hits)
+		//if it bypasses the it means that the number of hits found can be collected so we save it
+		saveHits(ctx, queries, conn, page0.Hits)
 
-	// 	//go through all the pages that are available and save em (I know they can all be saved because there are less than 1000 hits)
-	// 	for page := 1; page < page0.NbPages; page++ {
-	// 		saveHits(ctx, queries, conn, scrapePostings(page, currentLowPrice, currentHighPrice, brandName).Hits)
+		//go through all the pages that are available and save em (I know they can all be saved because there are less than 1000 hits)
+		for page := 1; page < page0.NbPages; page++ {
+			saveHits(ctx, queries, conn, scrapePostings(page, currentLowPrice, currentHighPrice, brandName).Hits)
 
-	// 		//Prevents the program from being rate limited by the site
-	// 		time.Sleep(3 * time.Second)
-	// 	}
+			//Prevents the program from being rate limited by the site
+			time.Sleep(3 * time.Second)
+		}
 
-	// 	//if the hits are less than 500 widen the window
-	// 	if page0.NbHits < 500 {
-	// 		priceStep *= 2
-	// 	}
+		//if the hits are less than 500 widen the window
+		if page0.NbHits < 500 {
+			priceStep *= 2
+		}
 
-	// 	// move the binary search up one
-	// 	currentLowPrice = currentHighPrice + 1
-	// }
+		// move the binary search up one
+		currentLowPrice = currentHighPrice + 1
+	}
 
-	// //After all the data is in the database calculate the median and pass the decimal value to medianPrice
-	// processMedian, err := queries.CalculateMedianPriceOfBrand(ctx)
-	// if err != nil {
-	// 	log.Fatal("Error Processing the price median for the collected postings!", err)
-	// }
-	// medianPrice := processMedian.Float64
+	//After all the data is in the database calculate the median and pass the decimal value to medianPrice
+	processMedian, err := queries.CalculateMedianPriceOfBrand(ctx)
+	if err != nil {
+		log.Fatal("Error Processing the price median for the collected postings!", err)
+	}
+	medianPrice := processMedian.Float64
 
-	// //Flag Postings in the db that fall below the median (lowMedian and highMedian are used as a band to avoid collecting pure junk postings).
-	// lowMedian := math.Ceil(((medianPrice * 0.3) * 100)) / 100
-	// highMedian := math.Ceil(((medianPrice * 0.7) * 100)) / 100
+	//Flag Postings in the db that fall below the median (lowMedian and highMedian are used as a band to avoid collecting pure junk postings).
+	lowMedian := math.Ceil(((medianPrice * 0.3) * 100)) / 100
+	highMedian := math.Ceil(((medianPrice * 0.7) * 100)) / 100
 
-	// //Flags posting using SQL querying
-	// err = queries.FlagDeals(ctx, db.FlagDealsParams{
-	// 	Low:  lowMedian,
-	// 	High: highMedian,
-	// })
-	// if err != nil {
-	// 	log.Fatal("Error flagging postings", err)
-	// }
+	//Flags posting using SQL querying
+	err = queries.FlagDeals(ctx, db.FlagDealsParams{
+		Low:  lowMedian,
+		High: highMedian,
+	})
+	if err != nil {
+		log.Fatal("Error flagging postings", err)
+	}
 
 }
 

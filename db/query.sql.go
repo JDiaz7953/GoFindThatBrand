@@ -12,16 +12,24 @@ import (
 
 const calculateMedianPriceOfBrand = `-- name: CalculateMedianPriceOfBrand :one
 SELECT AVG(price)
-FROM (SELECT price
-    FROM grailed_postings_db
-    ORDER BY price
-    LIMIT 2 - ( SELECT COUNT(price) FROM grailed_postings_db) % 2
-    OFFSET (SELECT (COUNT(price) - 1) / 2
-        FROM grailed_postings_db))
+FROM (SELECT price, designer_names, category_path
+    FROM grailed_postings_db as p
+    WHERE p.designer_names = ?1 AND p.category_path = ?2
+    ORDER BY p.price
+    LIMIT 2 - ( SELECT COUNT(c1.price) FROM grailed_postings_db as c1
+    WHERE c1.designer_names = ?1 AND c1.category_path = ?2) % 2
+    OFFSET (SELECT (COUNT(c2.price) - 1) / 2
+        FROM grailed_postings_db as c2  WHERE c2.designer_names = ?1 AND c2.category_path = ?2)
+        )
 `
 
-func (q *Queries) CalculateMedianPriceOfBrand(ctx context.Context) (sql.NullFloat64, error) {
-	row := q.db.QueryRowContext(ctx, calculateMedianPriceOfBrand)
+type CalculateMedianPriceOfBrandParams struct {
+	Brand    string
+	Category string
+}
+
+func (q *Queries) CalculateMedianPriceOfBrand(ctx context.Context, arg CalculateMedianPriceOfBrandParams) (sql.NullFloat64, error) {
+	row := q.db.QueryRowContext(ctx, calculateMedianPriceOfBrand, arg.Brand, arg.Category)
 	var avg sql.NullFloat64
 	err := row.Scan(&avg)
 	return avg, err
@@ -29,9 +37,9 @@ func (q *Queries) CalculateMedianPriceOfBrand(ctx context.Context) (sql.NullFloa
 
 const createPosting = `-- name: CreatePosting :exec
 INSERT INTO grailed_postings_db (
-    id, title, designer_names, department, category, sold, price, price_drop, image_url, posting_url, notified_at, flagged
+    id, title, designer_names, department, category, category_path, sold, price, price_drop, image_url, posting_url, notified_at, flagged
 ) VALUES (
-    ?,?,?,?,?,?,?,?,?,?,?,?
+    ?,?,?,?,?,?,?,?,?,?,?,?,?
     )
 ON CONFLICT(id) DO UPDATE SET
     title      = excluded.title,
@@ -47,6 +55,7 @@ type CreatePostingParams struct {
 	DesignerNames string
 	Department    string
 	Category      string
+	CategoryPath  string
 	Sold          string
 	Price         int
 	PriceDrop     sql.NullString
@@ -63,6 +72,7 @@ func (q *Queries) CreatePosting(ctx context.Context, arg CreatePostingParams) er
 		arg.DesignerNames,
 		arg.Department,
 		arg.Category,
+		arg.CategoryPath,
 		arg.Sold,
 		arg.Price,
 		arg.PriceDrop,
@@ -76,17 +86,26 @@ func (q *Queries) CreatePosting(ctx context.Context, arg CreatePostingParams) er
 
 const flagDeals = `-- name: FlagDeals :exec
 UPDATE grailed_postings_db
-SET flagged = 'true'
-WHERE price BETWEEN CAST(?1 AS REAL) AND CAST(?2 AS REAL)
+SET flagged = CASE
+    WHEN price BETWEEN CAST(?1 AS REAL) AND CAST(?2 AS REAL)
+    THEN 'true' ELSE 'false' END
+WHERE designer_names = ?3 AND category_path = ?4
 `
 
 type FlagDealsParams struct {
-	Low  float64
-	High float64
+	Low      float64
+	High     float64
+	Brand    string
+	Category string
 }
 
 func (q *Queries) FlagDeals(ctx context.Context, arg FlagDealsParams) error {
-	_, err := q.db.ExecContext(ctx, flagDeals, arg.Low, arg.High)
+	_, err := q.db.ExecContext(ctx, flagDeals,
+		arg.Low,
+		arg.High,
+		arg.Brand,
+		arg.Category,
+	)
 	return err
 }
 

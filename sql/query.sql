@@ -1,7 +1,7 @@
 
 -- name: CreatePosting :exec
 INSERT INTO grailed_postings_db (
-    id, title, designer_names, department, category, category_path,sold, price, price_drop, image_url, posting_url, notified_at, flagged
+    id, title, designer_names, department, category, category_path, sold, price, price_drop, image_url, posting_url, notified_at, flagged
 ) VALUES (
     ?,?,?,?,?,?,?,?,?,?,?,?,?
     )
@@ -15,13 +15,13 @@ ON CONFLICT(id) DO UPDATE SET
 -- name: CalculateMedianPriceOfBrand :one
 SELECT AVG(price)
 FROM (SELECT price, designer_names, category_path
-    FROM grailed_postings_db
-    WHERE designer_names = sqlc.arg(brand) AND category_path = sqlc.arg(category_path)
-    ORDER BY price
-    LIMIT 2 - ( SELECT COUNT(price) FROM grailed_postings_db
-    WHERE designer_names = sqlc.arg(brand) AND category_path = sqlc.arg(category_path)) % 2
-    OFFSET (SELECT (COUNT(price) - 1) / 2
-        FROM grailed_postings_db  WHERE designer_names = sqlc.arg(brand) AND category_path = sqlc.arg(category_path))
+    FROM grailed_postings_db as p
+    WHERE p.designer_names = sqlc.arg(brand) AND p.category_path = sqlc.arg(category)
+    ORDER BY p.price
+    LIMIT 2 - ( SELECT COUNT(c1.price) FROM grailed_postings_db as c1
+    WHERE c1.designer_names = sqlc.arg(brand) AND c1.category_path = sqlc.arg(category)) % 2
+    OFFSET (SELECT (COUNT(c2.price) - 1) / 2
+        FROM grailed_postings_db as c2  WHERE c2.designer_names = sqlc.arg(brand) AND c2.category_path = sqlc.arg(category))
         );
 
 
@@ -31,7 +31,7 @@ UPDATE grailed_postings_db
 SET flagged = CASE
     WHEN price BETWEEN CAST(sqlc.arg(low) AS REAL) AND CAST(sqlc.arg(high) AS REAL)
     THEN 'true' ELSE 'false' END
-WHERE designer_names = sqlc.arg(brand) AND category_path = sqlc.arg(category_path);
+WHERE designer_names = sqlc.arg(brand) AND category_path = sqlc.arg(category);
 
 -- name: InsertFilters :exec
 INSERT INTO scrape_queue(

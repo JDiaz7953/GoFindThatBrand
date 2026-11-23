@@ -14,6 +14,7 @@ type GrailedPostingsDb struct {
 	DesignerNames string
 	Department    string
 	Category      string
+	CategoryPath  string
 	Sold          string
 	Price         int
 	PriceDrop     sql.NullString

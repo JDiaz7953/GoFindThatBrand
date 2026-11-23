@@ -26,11 +26,11 @@ UPDATE grailed_postings_db
 SET flagged = 'true'
 WHERE price BETWEEN CAST(sqlc.arg(low) AS REAL) AND CAST(sqlc.arg(high) AS REAL);
 
--- Name: InsertFilters :exec
+-- name: InsertFilters :exec
 INSERT INTO scrape_queue(
-    id, designer_names, category
+    designer_names, category
     )
-    VALUES (?,?,?);
+    VALUES (?,?);
 
 
 -- name: ScrapingQueue :one

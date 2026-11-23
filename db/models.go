@@ -22,3 +22,10 @@ type GrailedPostingsDb struct {
 	NotifiedAt    sql.NullString
 	Flagged       string
 }
+
+type ScrapeQueue struct {
+	ID            int
+	DesignerNames string
+	Category      string
+	LastScraped   sql.NullString
+}

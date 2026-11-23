@@ -5,11 +5,11 @@ import os
 
 # This function works as a script so that the key can be rotated out when needed
 
-#KEY_FILE = r"C:\Users\jaide\Documents\Workspace\Projects\GoFindThatBrand\key.txt"
-KEY_FILE = "/Users/jaidendiaz/Documents/WorkSpace/GoFindThatBrand/key.txt"
+KEY_FILE = r"C:\Users\jaide\Documents\Workspace\Projects\GoFindThatBrand\key.txt"
+#KEY_FILE = "/Users/jaidendiaz/Documents/WorkSpace/GoFindThatBrand/key.txt"
 async def main():
 
-    driver = await cdp_driver.start_async(locale="en", browser_executable_path="/Users/jaidendiaz/Desktop/Google Chrome.app/Contents/MacOS/Google Chrome")
+    driver = await cdp_driver.start_async(locale="en")
     endpointUrl = driver.get_endpoint_url()
     captured = {}
     async with async_playwright() as p:

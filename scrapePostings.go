@@ -16,10 +16,7 @@ import (
 // Search a list of posting based on the query parameter
 func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName string) Results {
 
-	key, err := readKey(`C:\Users\jaide\Documents\Workspace\Projects\GoFindThatBrand\key.txt`)
-	if err != nil {
-		log.Fatal(err)
-	}
+	key := "ZTkzZTNkNGMyMTg1NDkzMjQyYmU5Y2Y3OWNiMGFjYzU3NDQzYzQ4ZmVkMjlkZTY2YjU1MGYyN2E3YmE2NmJkMXZhbGlkVW50aWw9MTc5NTI2MDQzNiZ1c2VyVG9rZW49OTYuMjM4LjYzLjE5"
 
 	urlToSite := "https://mnrwefss2q-dsn.algolia.net/1/indexes/*/queries"
 

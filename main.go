@@ -6,18 +6,23 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
+	"io"
 	"log"
 	"math"
+	"net/http"
 	"strconv"
 	"time"
+	"strings"
+
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 /*
 	------ What Should the program do? -------
 	- automate key renewal
 	- Scrape grailed site by a specified brand and category that rotate on a queue (Important!! makes it a lot more effecient and reliable)
-	- Set cron job to automate on a schedule 
+	- Set cron job to automate on a schedule
 	- send flagged postings to a discord bot to notify users
 	- recheck for price changes
 
@@ -33,7 +38,7 @@ import (
 	- How am i gonna check if an item has reduced in price that is already in my data
    	- recheck listings after a certain amount of time?
 	- How am I going to allow it to scale to other brands -----> Using a queue system that utalizes arry
-	- Reducing search filters to fit me (Size, brand, category) produces a more effecient program may have to lean towards that 
+	- Reducing search filters to fit me (Size, brand, category) produces a more effecient program may have to lean towards that
 
 	 Optimizations: seaching by a specifed brand lowers the ammount of hits in a query making the scrape work faster
  	Stretch: Find a way to automate the key renewal
@@ -51,11 +56,11 @@ TO DOs:
 */
 
 /*
-Current Task(s): 
-	
+Current Task(s):
+
 	- Adjust for dynamic filtering for clothing that matters to me such as: Category and Brand
-	- convert for a cron job to repeate on a schedule and send findings to the database 
-	
+	- convert for a cron job to repeate on a schedule and send findings to the database
+
 	- recheck pricing
 	- Establish a connection with discord bot so it sends listing  Update notify_at (LAST)
 */
@@ -74,20 +79,17 @@ func main() {
 	brandName := "Supreme"
 
 	//Initialize queue job with specified filter to rotate between based on when that filter was last scraped
-		// Call scrape postings and extract all the brands and category 
-		
-		// Conditional that filters for the category and brand I want 
 
-		// Store those results in a slice struct from the db package
-
-		// Insert it into the scrape_queue table
-
-		// The table is now ready to process jobs. Note: scrape posting is going to have to be edited to take a category parameter 
+	// Call scrape postings and extract all the brands and category
 
 
-	//Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit 
+	// Insert it into the scrape_queue table
+
+	// The table is now ready to process jobs. Note: scrape posting is going to have to be edited to take a category parameter
+
+	//Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit
 	currentLowPrice, priceStep := 0, 100
-	maxPrice := scrapePostings(0,0,1000000,brandName).FacetStats.Price_i.Max //Captures the max amount for the specifed filter inputted into query 
+	maxPrice := scrapePostings(0, 0, 1000000, brandName).FacetStats.Price_i.Max //Captures the max amount for the specifed filter inputted into query
 	for currentLowPrice <= maxPrice {
 		currentHighPrice := currentLowPrice + priceStep - 1
 
@@ -141,7 +143,74 @@ func main() {
 	}
 
 	// Build queue systems thats able to queue up different filters in rotation, but then how does this effect the median calculated
+
+}
+
+func seedQueue(ctx context.Context, queries *db.Queries) {
+	body := strings.NewReader(`{"requests":[{"indexName":"Listing_by_listing_quality_production","params":"` +
+		`facets=%5B%22designers.name%22%2C%22category_path%22%5D` +
+		`&filters=department%3Amenswear&hitsPerPage=0&maxValuesPerFacet=1000&page=0&query="}]}`)
 	
+	key := "MjhmOTc2MWVjMDVhMGVlMWM0NGYxNWEwOTZjZWFiYjYyNGZhOWE5NjhiMTNhZmJlMmJkODJjNmQ2M2ZjYTQ1YnZhbGlkVW50aWw9MTc5NTQxOTQ5NSZ1c2VyVG9rZW49OTYuMjM4LjYzLjE5"
+	
+	req, _ := http.NewRequest("POST", "https://mnrwefss2q-dsn.algolia.net/1/indexes/*/queries", body)
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Origin", "https://www.grailed.com")
+	req.Header.Set("Referer", "https://www.grailed.com/")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("x-algolia-application-id", "MNRWEFSS2Q")
+	req.Header.Set("x-algolia-api-key", key)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal("Unexpected Status Code ", resp.StatusCode)
+	}
+	defer resp.Body.Close()
+
+	var root Root
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal("error filling root table with data")
+	}
+
+	err = json.Unmarshal(respBody, &root)
+	if err != nil {
+		log.Fatal("Failure to insert Queue Seed", err)
+	}
+
+	// Conditional that filters for the category and brand I want, looping through a map
+	var designerNames []string
+	var categories []string
+	
+	facets := root.Results[0].Facets
+	for key := range facets.DesignerNames {
+		designerNames = append(designerNames, key)
+	}
+	for key := range facets.CategoryPath {
+		categories = append(categories, key)
+	}
+	fmt.Println(categories)
+	fmt.Println(designerNames)
+
+	// Store those results in a slice struct from the db package
+	for i := 0; i < len(designerNames); i++ {
+		if designerNames[i] == "Gucci" ||
+			designerNames[i] == "Prada" ||
+			designerNames[i] == "Balenciaga" ||
+			designerNames[i] == "Carhartt" {
+			for j := 0; j < len(categories); j++ {
+				err := queries.InsertFilters(ctx, db.InsertFiltersParams{
+					DesignerNames: designerNames[i],
+					Category:      categories[j],
+				})
+				if err != nil {
+					log.Fatal("Error adding filters to the database", err)
+				}
+			}
+		}
+	}
+
 
 }
 

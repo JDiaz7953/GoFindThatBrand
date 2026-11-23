@@ -23,13 +23,19 @@ type Hits struct {
 }
 
 type Results struct {
-	Hits       []Hits `json:"hits,omitempty"`
-	Page       int    `json:"page"`
-	NbPages    int    `json:"nbPages"`
-	NbHits     int    `json:"nbHits"`
+	Hits    []Hits `json:"hits,omitempty"`
+	Page    int    `json:"page"`
+	NbPages int    `json:"nbPages"`
+	NbHits  int    `json:"nbHits"`
+
 	FacetStats struct {
 		Price_i struct {
 			Max int `json:"max"`
 		} `json:"price_i"`
 	} `json:"facets_stats"`
+
+	Facets struct {
+		DesignerNames map[string]int `json:"designers.name"`
+		CategoryPath  map[string]int `json:"category_path"`
+	} `json:"facets"`
 }

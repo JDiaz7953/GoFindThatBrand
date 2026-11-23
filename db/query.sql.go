@@ -89,3 +89,50 @@ func (q *Queries) FlagDeals(ctx context.Context, arg FlagDealsParams) error {
 	_, err := q.db.ExecContext(ctx, flagDeals, arg.Low, arg.High)
 	return err
 }
+
+const insertFilters = `-- name: InsertFilters :exec
+INSERT INTO scrape_queue(
+    designer_names, category
+    )
+    VALUES (?,?)
+`
+
+type InsertFiltersParams struct {
+	DesignerNames string
+	Category      string
+}
+
+func (q *Queries) InsertFilters(ctx context.Context, arg InsertFiltersParams) error {
+	_, err := q.db.ExecContext(ctx, insertFilters, arg.DesignerNames, arg.Category)
+	return err
+}
+
+const markJobCompleted = `-- name: MarkJobCompleted :exec
+UPDATE scrape_queue
+SET last_scraped = datetime('now')
+WHERE id = ?
+`
+
+func (q *Queries) MarkJobCompleted(ctx context.Context, id int) error {
+	_, err := q.db.ExecContext(ctx, markJobCompleted, id)
+	return err
+}
+
+const scrapingQueue = `-- name: ScrapingQueue :one
+SELECT id, designer_names, category FROM scrape_queue
+ORDER BY last_scraped, id
+LIMIT 1
+`
+
+type ScrapingQueueRow struct {
+	ID            int
+	DesignerNames string
+	Category      string
+}
+
+func (q *Queries) ScrapingQueue(ctx context.Context) (ScrapingQueueRow, error) {
+	row := q.db.QueryRowContext(ctx, scrapingQueue)
+	var i ScrapingQueueRow
+	err := row.Scan(&i.ID, &i.DesignerNames, &i.Category)
+	return i, err
+}

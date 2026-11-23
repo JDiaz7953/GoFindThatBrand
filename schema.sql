@@ -16,9 +16,9 @@ CREATE TABLE "grailed_postings_db" (
 
 
 CREATE TABLE "scrape_queue" (
-	"id" INTEGER NULL
-	"designer_names" TEXT NOT NULL,
-	"category" TEXT NOT NULL
-	"last_scraped" TEXT
+	"id"	INTEGER NOT NULL,
+	"designer_names"	TEXT NOT NULL,
+	"category"	TEXT NOT NULL,
+	"last_scraped"	TEXT,
 	PRIMARY KEY("id")
 )

@@ -14,17 +14,24 @@ ON CONFLICT(id) DO UPDATE SET
 
 -- name: CalculateMedianPriceOfBrand :one
 SELECT AVG(price)
-FROM (SELECT price
+FROM (SELECT price, designer_names, category_path
     FROM grailed_postings_db
+    WHERE designer_names = sqlc.arg(brand) AND category_path = sqlc.arg(category_path)
     ORDER BY price
-    LIMIT 2 - ( SELECT COUNT(price) FROM grailed_postings_db) % 2
+    LIMIT 2 - ( SELECT COUNT(price) FROM grailed_postings_db
+    WHERE designer_names = sqlc.arg(brand) AND category_path = sqlc.arg(category_path)) % 2
     OFFSET (SELECT (COUNT(price) - 1) / 2
-        FROM grailed_postings_db));
+        FROM grailed_postings_db  WHERE designer_names = sqlc.arg(brand) AND category_path = sqlc.arg(category_path))
+        );
+
+
 
 -- name: FlagDeals :exec
 UPDATE grailed_postings_db
-SET flagged = 'true'
-WHERE price BETWEEN CAST(sqlc.arg(low) AS REAL) AND CAST(sqlc.arg(high) AS REAL);
+SET flagged = CASE
+    WHEN price BETWEEN CAST(sqlc.arg(low) AS REAL) AND CAST(sqlc.arg(high) AS REAL)
+    THEN 'true' ELSE 'false' END
+WHERE designer_names = sqlc.arg(brand) AND category_path = sqlc.arg(category_path);
 
 -- name: InsertFilters :exec
 INSERT INTO scrape_queue(

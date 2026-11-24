@@ -3,6 +3,7 @@ package main
 import (
 	"ClotheScrape/models"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -14,16 +15,17 @@ import (
 )
 
 // Search a list of posting based on the query parameter
-func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName string) models.Results {
+func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName, category string) (models.Results, error) {
 
-	key := "ZTkzZTNkNGMyMTg1NDkzMjQyYmU5Y2Y3OWNiMGFjYzU3NDQzYzQ4ZmVkMjlkZTY2YjU1MGYyN2E3YmE2NmJkMXZhbGlkVW50aWw9MTc5NTI2MDQzNiZ1c2VyVG9rZW49OTYuMjM4LjYzLjE5"
+	//Get the key from the written file
+	key, err := readKey("/key.txt")
 
 	urlToSite := "https://mnrwefss2q-dsn.algolia.net/1/indexes/*/queries"
 
 	//Sets the price range the program will search from
 	priceRange := url.QueryEscape(fmt.Sprintf(`["price_i>=%d","price_i<=%d"]`, currentLowPrice, currentHighPrice))
 
-	brandToScrape := url.QueryEscape(`department:menswear AND designers.name:"` + brandName + `" AND category_path:"tops.short_sleeve_shirts"`)
+	brandToScrape := url.QueryEscape(`department:menswear AND designers.name:"` + brandName + `" AND category_path:"` + category + `"`)
 
 	//Query parameters search for specified data i.e brand, type of clothing, ect..
 	reqBody := strings.NewReader(
@@ -73,10 +75,10 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName strin
 	if err != nil {
 		log.Fatal("Error extracting data", err)
 	} else if len(root.Results) == 0 {
-		log.Fatal("Result is 0 Panic will occurr ending program now ")
+		return models.Results{}, errors.New("No results")
 	}
 
-	return root.Results[0]
+	return root.Results[0], nil
 }
 
 // Reads the API key scraped and stored in the python script

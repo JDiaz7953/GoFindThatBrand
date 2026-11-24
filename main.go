@@ -14,6 +14,8 @@ import (
 	"time"
 	_ "time"
 
+	"os/exec"
+
 	_ "github.com/mattn/go-sqlite3"
 
 	"ClotheScrape/dbUtil"
@@ -59,8 +61,8 @@ TO DOs:
 
 /*
 Current Task(s):
-
-	- Adjust for dynamic filtering for clothing that matters to me such as: Category and Brand
+	- write script so they is captured
+	- write the loop
 	- recheck pricing
 	- Establish a connection with discord bot so it sends listing  Update notify_at (LAST)
 
@@ -68,6 +70,7 @@ Current Task(s):
 
 //go:embed sql/schema.sql
 var ddl string
+
 func main() {
 
 	//Open database connection
@@ -85,89 +88,117 @@ func main() {
 
 	defer conn.Close()
 
-	brandName := "Supreme"
+	//Call the python program to wrtie the key
+	cmd := exec.Command("python", "-m", "scripts.captureKey")
+	err = cmd.Run()
 
-	//For loop
+jobLoop:
+	for {
 
-	//check if key is alive
+		//sleep to avoid rate limiting
+		time.Sleep(60 * time.Second)
 
-	//dont fatal log errors and repeat 
-
-	//first I have to get the designerName and the category
-
-	//pass the designerName and category to scrape posting to get the specified categories
-
-	//the loop beings scraping it
-
-	//after pass parameters to properly calculate the median and correctly flag the postings 
-
-	//Then mark when that categories job ran 
-
-	//Sleep
-
-	//Repeat
-
-
-
-
-	//Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit
-	currentLowPrice, priceStep := 0, 100
-	maxPrice := scrapePostings(0, 0, 1000000, brandName).FacetStats.Price_i.Max //Captures the max amount for the specifed filter inputted into query
-	for currentLowPrice <= maxPrice {
-		currentHighPrice := currentLowPrice + priceStep - 1
-
-		//Search for the current postings using the starting parameters of the price and page which is zero
-		page0 := scrapePostings(0, currentLowPrice, currentHighPrice, brandName) //Searching the page
-
-		//If the amount of hits are greater than 1000 then reduce the highPrice
-		if page0.NbHits > 1000 && priceStep > 1 {
-			priceStep /= 2
+		//Get the category and brand next on the queue
+		currentJob, err := queries.ScrapingQueue(ctx)
+		if err != nil {
+			time.Sleep(60 * time.Second)
 			continue
 		}
 
-		//if it bypasses the it means that the number of hits found can be collected so we save it
-		saveHits(ctx, queries, conn, page0.Hits)
+		//Captures the max amount for the specifed filter inputted into query
+		res, err := scrapePostings(0, 0, 1000000, currentJob.DesignerNames, currentJob.Category) // if results is empty return an error to try to get a key again
+		if err != nil {
+			time.Sleep(60 * time.Second)
 
-		//go through all the pages that are available and save em (I know they can all be saved because there are less than 1000 hits)
-		for page := 1; page < page0.NbPages; page++ {
-			saveHits(ctx, queries, conn, scrapePostings(page, currentLowPrice, currentHighPrice, brandName).Hits)
+			cmd := exec.Command("python", "-m", "scripts.captureKey")
+			keyErr := cmd.Run()
+			if keyErr != nil {
+				log.Fatal("Error calling python script")
+			} // The function that reads the key is in scrapePostings.go
 
-			//Prevents the program from being rate limited by the site
-			time.Sleep(3 * time.Second)
+			continue
 		}
 
-		//if the hits are less than 500 widen the window
-		if page0.NbHits < 500 {
-			priceStep *= 2
+		//Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit
+		currentLowPrice, priceStep := 0, 100
+		maxPrice := res.FacetStats.Price_i.Max
+		for currentLowPrice <= maxPrice {
+			currentHighPrice := currentLowPrice + priceStep - 1
+
+			//Search for the current postings using the starting parameters of the price and page which is zero
+			page0, err := scrapePostings(0, currentLowPrice, currentHighPrice, currentJob.DesignerNames, currentJob.Category) //Searching the page
+			if err != nil {
+				continue jobLoop
+			}
+
+			//If the amount of hits are greater than 1000 then reduce the highPrice
+			if page0.NbHits > 1000 && priceStep > 1 {
+				priceStep /= 2
+				continue
+			}
+
+			//if it bypasses the it means that the number of hits found can be collected so we save it
+			saveHits(ctx, queries, conn, page0.Hits)
+
+			//go through all the pages that are available and save em (I know they can all be saved because there are less than 1000 hits)
+			for page := 1; page < page0.NbPages; page++ {
+				res, err := scrapePostings(page, currentLowPrice, currentHighPrice, currentJob.DesignerNames, currentJob.Category)
+				if err != nil {
+					continue jobLoop
+				}
+
+				saveHits(ctx, queries, conn, res.Hits)
+
+				//Prevents the program from being rate limited by the site
+				time.Sleep(3 * time.Second)
+			}
+
+			//if the hits are less than 500 widen the window
+			if page0.NbHits < 500 {
+				priceStep *= 2
+			}
+
+			// move the binary search up one
+			currentLowPrice = currentHighPrice + 1
 		}
 
-		// move the binary search up one
-		currentLowPrice = currentHighPrice + 1
-	}
+		//After all the data is in the database calculate the median and pass the decimal value to medianPrice
+		processMedian, err := queries.CalculateMedianPriceOfBrand(ctx, db.CalculateMedianPriceOfBrandParams{
+			Brand:    currentJob.DesignerNames,
+			Category: currentJob.Category,
+		})
+		if err != nil {
+			log.Fatal("Error Processing the price median for the collected postings!", err)
+		}
 
-	//After all the data is in the database calculate the median and pass the decimal value to medianPrice
-	processMedian, err := queries.CalculateMedianPriceOfBrand(ctx)
-	if err != nil {
-		log.Fatal("Error Processing the price median for the collected postings!", err)
-	}
-	medianPrice := processMedian.Float64
+		if processMedian.Valid == true {
+			medianPrice := processMedian.Float64
 
-	//Flag Postings in the db that fall below the median (lowMedian and highMedian are used as a band to avoid collecting pure junk postings).
-	lowMedian := math.Ceil(((medianPrice * 0.3) * 100)) / 100
-	highMedian := math.Ceil(((medianPrice * 0.7) * 100)) / 100
+			//Flag Postings in the db that fall below the median (lowMedian and highMedian are used as a band to avoid collecting pure junk postings).
+			lowMedian := math.Ceil(((medianPrice * 0.3) * 100)) / 100
+			highMedian := math.Ceil(((medianPrice * 0.7) * 100)) / 100
 
-	//Flags posting using SQL querying
-	err = queries.FlagDeals(ctx, db.FlagDealsParams{
-		Low:  lowMedian,
-		High: highMedian,
-	})
-	if err != nil {
-		log.Fatal("Error flagging postings", err)
+			//Flags posting using SQL querying
+			err = queries.FlagDeals(ctx, db.FlagDealsParams{
+				Low:      lowMedian,
+				High:     highMedian,
+				Brand:    currentJob.DesignerNames,
+				Category: currentJob.Category,
+			})
+			if err != nil {
+				fmt.Println("Error flagging valuesn ")
+			}
+		}
+
+		//Stamp a job with when it was last completed
+		err = queries.MarkJobCompleted(ctx, currentJob.ID)
+		if err != nil {
+			fmt.Print("Error marking job complete")
+		}
+
 	}
 
 }
-
-
 
 // Takes in the root and narrow it down to using results and hits
 func saveHits(ctx context.Context, queries *db.Queries, conn *sql.DB, hits []models.Hits) {

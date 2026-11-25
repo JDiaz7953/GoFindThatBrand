@@ -12,8 +12,6 @@ import (
 	"time"
 	_ "time"
 
-	"os/exec"
-
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -71,23 +69,20 @@ func main() {
 
 	//Open database connection
 	ctx := context.Background()
-	conn, err := sql.Open("sqlite3", "./grailed_posting_db.db")
+	conn, err := sql.Open("sqlite3", "./sql/grailed_posting_db.db")
 	if err != nil {
 		log.Fatal("Unable to use data source name", err)
 	}
-	queries := db.New(conn)
 
 	// create tables
 	if _, err := conn.ExecContext(ctx, ddl); err != nil {
 		log.Fatal("error creating tabel", err)
 	}
+	queries := db.New(conn)
 
 	defer conn.Close()
 
-	//Call the python program to wrtie the key
-	cmd := exec.Command("python", "-m", "scripts.captureKey")
-	err = cmd.Run()
-
+	fmt.Println("Starting webcrawler")
 	for {
 
 		//sleep to avoid rate limiting
@@ -99,12 +94,14 @@ func main() {
 			time.Sleep(60 * time.Second)
 			continue
 		}
+		fmt.Println("Processing: " + currentJob.DesignerNames + " and " + currentJob.Category)
 
 		//Runs crawler loop that scrapes and saves postings
 		err = CrawlSite(ctx, queries, conn, currentJob)
 		if err != nil {
 			continue
 		}
+		fmt.Println("Crawler succesfully processed: " + currentJob.DesignerNames + " and " + currentJob.Category + "!!")
 
 		//After all the data is in the database calculate the median and pass the decimal value to medianPrice
 		processMedian, err := queries.CalculateMedianPriceOfBrand(ctx, db.CalculateMedianPriceOfBrandParams{

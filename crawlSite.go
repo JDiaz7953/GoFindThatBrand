@@ -19,9 +19,11 @@ func CrawlSite(ctx context.Context, queries *db.Queries, conn *sql.DB, currentJo
 	//Captures the max amount for the specifed filter inputted into query
 	res, err := scrapePostings(0, 0, 1000000, currentJob.DesignerNames, currentJob.Category) // if results is empty return an error to try to get a key again
 	if err != nil {
+		fmt.Println("hell0")
 		WriteKey()
 		return err
 	}
+	fmt.Println("Running Crawler.....")
 
 	//Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit
 	currentLowPrice, priceStep := 0, 100
@@ -34,6 +36,7 @@ func CrawlSite(ctx context.Context, queries *db.Queries, conn *sql.DB, currentJo
 		if err != nil {
 			return err
 		}
+		
 
 		//If the amount of hits are greater than 1000 then reduce the highPrice
 		if page0.NbHits > 1000 && priceStep > 1 {
@@ -84,24 +87,23 @@ func saveHits(ctx context.Context, queries *db.Queries, conn *sql.DB, hits []mod
 			log.Fatal(err)
 		}
 
-		if h.DesignerNames == "Supreme" {
-			posting := db.GrailedPostingsDb{
-				ID:            h.ID,
-				Title:         h.Title,
-				DesignerNames: h.DesignerNames,
-				Department:    h.Department,
-				Category:      h.Catagory,
-				Sold:          strconv.FormatBool(h.Sold), //Sqlite doesnt take bool values so it must be converted to text in order to store it properly
-				Price:         h.Price,
-				PriceDrop:     sql.NullString{String: string(pd), Valid: len(h.PriceDrop) > 0},
-				ImageUrl:      h.CoverPhoto.ImageUrl,
-				PostingUrl:    "https://www.grailed.com/listings/" + strconv.Itoa(h.ID),
-				Flagged:       strconv.FormatBool(false),
-			}
-
-			postings = append(postings, posting)
-
+		posting := db.GrailedPostingsDb{
+			ID:            h.ID,
+			Title:         h.Title,
+			DesignerNames: h.DesignerNames,
+			Department:    h.Department,
+			Category:      h.Catagory,
+			CategoryPath:  h.CatagoryPath,
+			Sold:          strconv.FormatBool(h.Sold), //Sqlite doesnt take bool values so it must be converted to text in order to store it properly
+			Price:         h.Price,
+			PriceDrop:     sql.NullString{String: string(pd), Valid: len(h.PriceDrop) > 0},
+			ImageUrl:      h.CoverPhoto.ImageUrl,
+			PostingUrl:    "https://www.grailed.com/listings/" + strconv.Itoa(h.ID),
+			Flagged:       strconv.FormatBool(false),
 		}
+
+		postings = append(postings, posting)
+
 	}
 
 	//store results in the database gonna have to use withtx to process multiple transactions cleanly and effeciently
@@ -113,14 +115,14 @@ func saveHits(ctx context.Context, queries *db.Queries, conn *sql.DB, hits []mod
 	}
 }
 
-//Writes Api-key to key.txt
+// Writes Api-key to key.txt
 func WriteKey() {
 
 	//if the program cant run the python script then its better to end the program
-	cmd := exec.Command("python", "-m", "scripts.captureKey")
+	cmd := exec.Command("python", "-m", "script.captureKey")
 	err := cmd.Run()
-	fmt.Println("Key refreshed")
 	if err != nil {
-		log.Fatal("Unable to run python script canceling program")
+		log.Fatal()
 	}
+	fmt.Println("Key refreshed")
 }

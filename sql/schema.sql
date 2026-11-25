@@ -1,4 +1,4 @@
-CREATE TABLE "grailed_postings_db" (
+CREATE TABLE IF NOT EXISTS "grailed_postings_db" (
 	"id"				INTEGER NOT NULL,
 	"title"				TEXT NOT NULL,
 	"designer_names"	TEXT NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE "grailed_postings_db" (
 );
 
 
-CREATE TABLE "scrape_queue" (
+CREATE TABLE IF NOT EXISTS "scrape_queue" (
 	"id"	INTEGER NOT NULL,
 	"designer_names"	TEXT NOT NULL,
 	"category"	TEXT NOT NULL,

@@ -30,6 +30,8 @@ async def main():
             await page.mouse.wheel(0, 1500)
             await page.wait_for_timeout(3000)
             if not captured.get("apiKey"):
+                print("no value captured")
+                print(captured)
                 sys.exit(1)
         finally:
             driver.quit()

@@ -18,7 +18,10 @@ import (
 func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName, category string) (models.Results, error) {
 
 	//Get the key from the written file
-	key, err := readKey("/key.txt")
+	key, err := readKey("./key.txt")
+	if err != nil {
+		fmt.Println("Error reading key.txt ", err)
+	}
 
 	urlToSite := "https://mnrwefss2q-dsn.algolia.net/1/indexes/*/queries"
 
@@ -58,13 +61,10 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName, cate
 	req.Header.Set("x-algolia-application-id", "MNRWEFSS2Q")
 	req.Header.Set("x-algolia-api-key", key)
 
-	//Further delay to prevent rate limiting from occuring
-	// time.Sleep(2 * time.Second)
-
 	//Performs the request to the site
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatal("Unexpected Status Code ", resp.StatusCode)
+	if resp.StatusCode != 200 {
+		log.Fatal("Unexpected Status Code ", err)
 	}
 	defer resp.Body.Close()
 
@@ -85,7 +85,7 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName, cate
 func readKey(path string) (string, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	return strings.TrimSpace(string(b)), nil
 }

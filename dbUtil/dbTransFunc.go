@@ -4,8 +4,6 @@ import (
 	"ClotheScrape/db"
 	"context"
 	"database/sql"
-	"fmt"
-
 	_ "github.com/mattn/go-sqlite3" // why is this neede?
 )
 
@@ -23,13 +21,13 @@ func BulkInsertPostings(ctx context.Context, conn *sql.DB, queries *db.Queries, 
 
 	//run loop that adds each element from db.grailedPosting to the database
 	for _, p := range postings {
-		fmt.Println(p)
 		if err := qtx.CreatePosting(ctx, db.CreatePostingParams{
 			ID:            p.ID,
 			Title:         p.Title,
 			DesignerNames: p.DesignerNames,
 			Department:    p.Department,
 			Category:      p.Category,
+			CategoryPath:  p.CategoryPath,
 			Sold:          p.Sold,
 			Price:         p.Price,
 			PriceDrop:     sql.NullString{String: p.PriceDrop.String, Valid: p.PriceDrop.Valid},

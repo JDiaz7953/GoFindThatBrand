@@ -63,6 +63,7 @@ TO DOs:
 Current Task(s):
 	- write script so they is captured
 	- write the loop
+	- simplify loop
 	- recheck pricing
 	- Establish a connection with discord bot so it sends listing  Update notify_at (LAST)
 
@@ -76,10 +77,11 @@ func main() {
 	//Open database connection
 	ctx := context.Background()
 	conn, err := sql.Open("sqlite3", "./grailed_posting_db.db")
-	queries := db.New(conn)
 	if err != nil {
 		log.Fatal("Unable to use data source name", err)
 	}
+	queries := db.New(conn)
+	
 
 	// create tables
 	if _, err := conn.ExecContext(ctx, ddl); err != nil {
@@ -92,7 +94,6 @@ func main() {
 	cmd := exec.Command("python", "-m", "scripts.captureKey")
 	err = cmd.Run()
 
-jobLoop:
 	for {
 
 		//sleep to avoid rate limiting
@@ -105,61 +106,10 @@ jobLoop:
 			continue
 		}
 
-		//Captures the max amount for the specifed filter inputted into query
-		res, err := scrapePostings(0, 0, 1000000, currentJob.DesignerNames, currentJob.Category) // if results is empty return an error to try to get a key again
+		//Runs crawler loop that scrapes and saves postings
+		err = CrawlSite(ctx, queries, conn, currentJob )
 		if err != nil {
-			time.Sleep(60 * time.Second)
-
-			cmd := exec.Command("python", "-m", "scripts.captureKey")
-			keyErr := cmd.Run()
-			if keyErr != nil {
-				log.Fatal("Error calling python script")
-			} // The function that reads the key is in scrapePostings.go
-
 			continue
-		}
-
-		//Partions queries into smaller queries in order to collect all the neccessary postings without having to worry about hitting the 1000 posting limit
-		currentLowPrice, priceStep := 0, 100
-		maxPrice := res.FacetStats.Price_i.Max
-		for currentLowPrice <= maxPrice {
-			currentHighPrice := currentLowPrice + priceStep - 1
-
-			//Search for the current postings using the starting parameters of the price and page which is zero
-			page0, err := scrapePostings(0, currentLowPrice, currentHighPrice, currentJob.DesignerNames, currentJob.Category) //Searching the page
-			if err != nil {
-				continue jobLoop
-			}
-
-			//If the amount of hits are greater than 1000 then reduce the highPrice
-			if page0.NbHits > 1000 && priceStep > 1 {
-				priceStep /= 2
-				continue
-			}
-
-			//if it bypasses the it means that the number of hits found can be collected so we save it
-			saveHits(ctx, queries, conn, page0.Hits)
-
-			//go through all the pages that are available and save em (I know they can all be saved because there are less than 1000 hits)
-			for page := 1; page < page0.NbPages; page++ {
-				res, err := scrapePostings(page, currentLowPrice, currentHighPrice, currentJob.DesignerNames, currentJob.Category)
-				if err != nil {
-					continue jobLoop
-				}
-
-				saveHits(ctx, queries, conn, res.Hits)
-
-				//Prevents the program from being rate limited by the site
-				time.Sleep(3 * time.Second)
-			}
-
-			//if the hits are less than 500 widen the window
-			if page0.NbHits < 500 {
-				priceStep *= 2
-			}
-
-			// move the binary search up one
-			currentLowPrice = currentHighPrice + 1
 		}
 
 		//After all the data is in the database calculate the median and pass the decimal value to medianPrice
@@ -168,7 +118,7 @@ jobLoop:
 			Category: currentJob.Category,
 		})
 		if err != nil {
-			log.Fatal("Error Processing the price median for the collected postings!", err)
+			fmt.Println("Error processing median", err)
 		}
 
 		if processMedian.Valid == true {
@@ -186,7 +136,7 @@ jobLoop:
 				Category: currentJob.Category,
 			})
 			if err != nil {
-				fmt.Println("Error flagging valuesn ")
+				fmt.Println("Error flagging values ")
 			}
 		}
 

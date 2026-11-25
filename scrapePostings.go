@@ -63,10 +63,17 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName, cate
 
 	//Performs the request to the site
 	resp, err := http.DefaultClient.Do(req)
-	if resp.StatusCode != 200 {
-		log.Fatal("Unexpected Status Code ", err)
+	if err != nil {
+		return models.Results{}, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == 400 {
+		return models.Results{}, errors.New("Key expired")
+	} else if resp.StatusCode != 200 {
+		log.Fatal("Unexpected Status Code: ", resp.StatusCode)
+	} 
+	
 
 	//After getting readable data it needs to me unmarshaled pointed to the result struct to map to the json tags of the models
 	var root models.Root

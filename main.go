@@ -86,7 +86,7 @@ func main() {
 	for {
 
 		//sleep to avoid rate limiting
-		time.Sleep(60 * time.Second)
+		//time.Sleep(60 * time.Second)
 
 		//Get the category and brand next on the queue
 		currentJob, err := queries.ScrapingQueue(ctx)

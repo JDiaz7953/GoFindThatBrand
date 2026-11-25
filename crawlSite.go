@@ -19,7 +19,6 @@ func CrawlSite(ctx context.Context, queries *db.Queries, conn *sql.DB, currentJo
 	//Captures the max amount for the specifed filter inputted into query
 	res, err := scrapePostings(0, 0, 1000000, currentJob.DesignerNames, currentJob.Category) // if results is empty return an error to try to get a key again
 	if err != nil {
-		fmt.Println("hell0")
 		WriteKey()
 		return err
 	}

@@ -1,9 +1,8 @@
-import asyncio
 from playwright.async_api import async_playwright
 from seleniumbase import cdp_driver
 import os
 import sys
-
+import asyncio
 # This function works as a script so that the key can be rotated out when needed
 
 KEY_FILE = r"C:\Users\jaide\Documents\Workspace\Projects\GoFindThatBrand\key.txt"

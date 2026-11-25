@@ -87,6 +87,5 @@ func readKey(path string) (string, error) {
 	if err != nil {
 		return "", nil
 	}
-
 	return strings.TrimSpace(string(b)), nil
 }

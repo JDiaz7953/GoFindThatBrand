@@ -5,21 +5,16 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math"
 	_ "math"
-	"strconv"
 	"time"
 	_ "time"
 
 	"os/exec"
 
 	_ "github.com/mattn/go-sqlite3"
-
-	"ClotheScrape/dbUtil"
-	"ClotheScrape/models"
 )
 
 /*
@@ -81,7 +76,6 @@ func main() {
 		log.Fatal("Unable to use data source name", err)
 	}
 	queries := db.New(conn)
-	
 
 	// create tables
 	if _, err := conn.ExecContext(ctx, ddl); err != nil {
@@ -107,7 +101,7 @@ func main() {
 		}
 
 		//Runs crawler loop that scrapes and saves postings
-		err = CrawlSite(ctx, queries, conn, currentJob )
+		err = CrawlSite(ctx, queries, conn, currentJob)
 		if err != nil {
 			continue
 		}
@@ -148,48 +142,4 @@ func main() {
 
 	}
 
-}
-
-// Takes in the root and narrow it down to using results and hits
-func saveHits(ctx context.Context, queries *db.Queries, conn *sql.DB, hits []models.Hits) {
-
-	//builds the struct of GrailedPosting
-	var postings []db.GrailedPostingsDb
-
-	// Stores each individual posting into the Hit struct
-	for _, h := range hits {
-
-		//Turn price drop into json string to properly place it in the database
-		pd, err := json.Marshal(h.PriceDrop)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if h.DesignerNames == "Supreme" {
-			posting := db.GrailedPostingsDb{
-				ID:            h.ID,
-				Title:         h.Title,
-				DesignerNames: h.DesignerNames,
-				Department:    h.Department,
-				Category:      h.Catagory,
-				Sold:          strconv.FormatBool(h.Sold), //Sqlite doesnt take bool values so it must be converted to text in order to store it properly
-				Price:         h.Price,
-				PriceDrop:     sql.NullString{String: string(pd), Valid: len(h.PriceDrop) > 0},
-				ImageUrl:      h.CoverPhoto.ImageUrl,
-				PostingUrl:    "https://www.grailed.com/listings/" + strconv.Itoa(h.ID),
-				Flagged:       strconv.FormatBool(false),
-			}
-
-			postings = append(postings, posting)
-
-		}
-	}
-
-	//store results in the database gonna have to use withtx to process multiple transactions cleanly and effeciently
-	err := dbUtil.BulkInsertPostings(ctx, conn, queries, postings)
-	if err != nil {
-		log.Fatal("Error processing SQL transaction", err)
-	} else {
-		fmt.Println("SQL Bulk insertion succesful!")
-	}
 }

@@ -2,25 +2,20 @@ package main
 
 import (
 	"ClotheScrape/db"
+	"ClotheScrape/dbUtil"
+	"ClotheScrape/models"
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"log"
 	"os/exec"
+	"strconv"
 	"time"
 )
 
-func WriteKey() {
-
-	//if the program cant run the python script then its better to end the program
-	cmd := exec.Command("python", "-m", "scripts.captureKey")
-	err := cmd.Run()
-	if err != nil {
-		log.Fatal("Unable to run python script canceling program")
-	}
-}
-
 func CrawlSite(ctx context.Context, queries *db.Queries, conn *sql.DB, currentJob db.ScrapingQueueRow) error {
-	
+
 	//Captures the max amount for the specifed filter inputted into query
 	res, err := scrapePostings(0, 0, 1000000, currentJob.DesignerNames, currentJob.Category) // if results is empty return an error to try to get a key again
 	if err != nil {
@@ -72,4 +67,60 @@ func CrawlSite(ctx context.Context, queries *db.Queries, conn *sql.DB, currentJo
 	}
 
 	return nil
+}
+
+// Takes in the root and narrow it down to using results and hits
+func saveHits(ctx context.Context, queries *db.Queries, conn *sql.DB, hits []models.Hits) {
+
+	//builds the struct of GrailedPosting
+	var postings []db.GrailedPostingsDb
+
+	// Stores each individual posting into the Hit struct
+	for _, h := range hits {
+
+		//Turn price drop into json string to properly place it in the database
+		pd, err := json.Marshal(h.PriceDrop)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if h.DesignerNames == "Supreme" {
+			posting := db.GrailedPostingsDb{
+				ID:            h.ID,
+				Title:         h.Title,
+				DesignerNames: h.DesignerNames,
+				Department:    h.Department,
+				Category:      h.Catagory,
+				Sold:          strconv.FormatBool(h.Sold), //Sqlite doesnt take bool values so it must be converted to text in order to store it properly
+				Price:         h.Price,
+				PriceDrop:     sql.NullString{String: string(pd), Valid: len(h.PriceDrop) > 0},
+				ImageUrl:      h.CoverPhoto.ImageUrl,
+				PostingUrl:    "https://www.grailed.com/listings/" + strconv.Itoa(h.ID),
+				Flagged:       strconv.FormatBool(false),
+			}
+
+			postings = append(postings, posting)
+
+		}
+	}
+
+	//store results in the database gonna have to use withtx to process multiple transactions cleanly and effeciently
+	err := dbUtil.BulkInsertPostings(ctx, conn, queries, postings)
+	if err != nil {
+		log.Fatal("Error processing SQL transaction", err)
+	} else {
+		fmt.Println("SQL Bulk insertion succesful!")
+	}
+}
+
+//Writes Api-key to key.txt
+func WriteKey() {
+
+	//if the program cant run the python script then its better to end the program
+	cmd := exec.Command("python", "-m", "scripts.captureKey")
+	err := cmd.Run()
+	fmt.Println("Key refreshed")
+	if err != nil {
+		log.Fatal("Unable to run python script canceling program")
+	}
 }

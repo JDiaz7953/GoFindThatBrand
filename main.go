@@ -132,6 +132,8 @@ func main() {
 			fmt.Print("Error marking job complete")
 		}
 
+		runBot(ctx, queries, currentJob)
+
 	}
 
 }

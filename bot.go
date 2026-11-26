@@ -26,8 +26,9 @@ func runBot(ctx context.Context,q *db.Queries,  currentJob db.ScrapingQueueRow )
 		Brand: currentJob.DesignerNames,
 		Category: currentJob.Category,
 	})
-
-	
+	if err != nil{
+		return err
+	}
 
 	for _, fp := range FlaggedPostings{
 		messages := discordgo.MessageEmbed{

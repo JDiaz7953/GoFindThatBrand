@@ -36,7 +36,6 @@ func CrawlSite(ctx context.Context, queries *db.Queries, conn *sql.DB, currentJo
 		if err != nil {
 			return err
 		}
-		
 
 		//If the amount of hits are greater than 1000 then reduce the highPrice
 		if page0.NbHits > 1000 && priceStep > 1 {

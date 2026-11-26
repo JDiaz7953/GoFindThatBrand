@@ -38,11 +38,11 @@ INSERT INTO scrape_queue(
     VALUES (?,?);
 
 -- name: GetFlaggedItem :many
-SELECT title, posting_url, price, image_url
+SELECT title, posting_url, price, image_url, category
 FROM grailed_postings_db
 WHERE category_path = sqlc.arg(category) 
 AND designer_names = sqlc.arg(brand)
-AND flagged = true
+AND flagged = 'true'
 ORDER BY price;
 
 -- name: ScrapingQueue :one

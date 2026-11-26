@@ -110,11 +110,11 @@ func (q *Queries) FlagDeals(ctx context.Context, arg FlagDealsParams) error {
 }
 
 const getFlaggedItem = `-- name: GetFlaggedItem :many
-SELECT title, posting_url, price, image_url
+SELECT title, posting_url, price, image_url, category
 FROM grailed_postings_db
 WHERE category_path = ?1 
 AND designer_names = ?2
-AND flagged = true
+AND flagged = 'true'
 ORDER BY price
 `
 
@@ -128,6 +128,7 @@ type GetFlaggedItemRow struct {
 	PostingUrl string
 	Price      int
 	ImageUrl   string
+	Category   string
 }
 
 func (q *Queries) GetFlaggedItem(ctx context.Context, arg GetFlaggedItemParams) ([]GetFlaggedItemRow, error) {
@@ -144,6 +145,7 @@ func (q *Queries) GetFlaggedItem(ctx context.Context, arg GetFlaggedItemParams) 
 			&i.PostingUrl,
 			&i.Price,
 			&i.ImageUrl,
+			&i.Category,
 		); err != nil {
 			return nil, err
 		}

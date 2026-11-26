@@ -3,7 +3,7 @@ package main
 import (
 	"ClotheScrape/models"
 	"encoding/json"
-	_"errors"
+	_ "errors"
 	"fmt"
 	"io"
 	"log"
@@ -28,7 +28,7 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName, cate
 	//Sets the price range the program will search from
 	priceRange := url.QueryEscape(fmt.Sprintf(`["price_i>=%d","price_i<=%d"]`, currentLowPrice, currentHighPrice))
 
-	brandToScrape := url.QueryEscape(`department:menswear AND designers.name:"` + brandName + `" AND category_path:"` + category + `"`)
+	brandToScrape := url.QueryEscape(`department:menswear AND designers.name:"` + brandName + `" AND category_path:"` + category + `" AND location:"United States"`)
 
 	//Query parameters search for specified data i.e brand, type of clothing, ect..
 	reqBody := strings.NewReader(
@@ -65,18 +65,17 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName, cate
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Println("request error ", err)
-		return scrapePostings(page, currentLowPrice, currentHighPrice, brandName, category )
+		return scrapePostings(page, currentLowPrice, currentHighPrice, brandName, category)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 400 {
 		fmt.Println("Key expired")
 		WriteKey()
-		return scrapePostings(page, currentLowPrice, currentHighPrice, brandName, category )
+		return scrapePostings(page, currentLowPrice, currentHighPrice, brandName, category)
 	} else if resp.StatusCode != 200 {
 		log.Fatal("Unexpected Status Code: ", resp.StatusCode)
-	} 
-	
+	}
 
 	//After getting readable data it needs to me unmarshaled pointed to the result struct to map to the json tags of the models
 	var root models.Root
@@ -85,10 +84,10 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName, cate
 	if err != nil {
 		log.Fatal("Error extracting data", err)
 	} else if len(root.Results) == 0 {
-		// if the data is empty instead of ending the process is completely just simply refresh for a new 
+		// if the data is empty instead of ending the process is completely just simply refresh for a new
 		fmt.Println("result empty error")
 		WriteKey()
-		return scrapePostings(page, currentLowPrice, currentHighPrice, brandName, category )
+		return scrapePostings(page, currentLowPrice, currentHighPrice, brandName, category)
 
 	}
 

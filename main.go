@@ -44,7 +44,7 @@ import (
 
 TO DOs:
 
-	Connecting the discord bot is not gonna be the issue figuring out how to get the data to the bot without overwhelming amout of notifications 
+	Connecting the discord bot is not gonna be the issue figuring out how to get the data to the bot without overwhelming amout of notifications
 
 */
 
@@ -132,7 +132,11 @@ func main() {
 			fmt.Print("Error marking job complete")
 		}
 
-		runBot(ctx, queries, currentJob)
+		fmt.Println("Processing Flagged Postings to GoodGrailed bot")
+		err = runBot(ctx, queries, currentJob)
+		if err != nil {
+			fmt.Println("Error sending data to discord channel")
+		}
 
 	}
 

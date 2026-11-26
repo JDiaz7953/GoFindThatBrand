@@ -1,0 +1,5 @@
+key.txt
+.env
+.venv/
+*.db
+sql/grailed_posting_db.db

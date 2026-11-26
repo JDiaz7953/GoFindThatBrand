@@ -20,6 +20,7 @@ func CrawlSite(ctx context.Context, queries *db.Queries, conn *sql.DB, currentJo
 	res, err := scrapePostings(0, 0, 1000000, currentJob.DesignerNames, currentJob.Category) // if results is empty return an error to try to get a key again
 	if err != nil {
 		WriteKey()
+		fmt.Println("Key refreshed")
 		return err
 	}
 	fmt.Println("Running Crawler.....")
@@ -48,6 +49,7 @@ func CrawlSite(ctx context.Context, queries *db.Queries, conn *sql.DB, currentJo
 
 		//go through all the pages that are available and save em (I know they can all be saved because there are less than 1000 hits)
 		for page := 1; page < page0.NbPages; page++ {
+			fmt.Println("page: ", page, " out of ", page0.NbPages, " Processed ")
 			res, err := scrapePostings(page, currentLowPrice, currentHighPrice, currentJob.DesignerNames, currentJob.Category)
 			if err != nil {
 				return err
@@ -56,7 +58,7 @@ func CrawlSite(ctx context.Context, queries *db.Queries, conn *sql.DB, currentJo
 			saveHits(ctx, queries, conn, res.Hits)
 
 			//Prevents the program from being rate limited by the site
-			time.Sleep(3 * time.Second)
+			time.Sleep(2 * time.Second)
 		}
 
 		//if the hits are less than 500 widen the window

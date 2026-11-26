@@ -10,7 +10,7 @@ type Hits struct {
 	DesignerNames string `json:"designer_names"`
 	Department    string `json:"department"`
 	Catagory      string `json:"category"`
-	CatagoryPath      string `json:"category_path"`
+	CatagoryPath  string `json:"category_path"`
 	Sold          bool   `json:"sold"`
 	Price         int    `json:"price"`
 	PriceDrop     []int  `json:"price_drop"`
@@ -39,4 +39,20 @@ type Results struct {
 		DesignerNames map[string]int `json:"designers.name"`
 		CategoryPath  map[string]int `json:"category_path"`
 	} `json:"facets"`
+}
+
+type DiscordMessage struct {
+	Url		   string
+	Title	   string
+	PriceDesc  int
+	Image	   *MessageEmbedImage 
+	
+
+}
+
+type MessageEmbedImage struct {
+	URL       string `json:"url"`
+	ProxyURL  string `json:"proxy_url,omitempty"`
+	Width     int    `json:"width,omitempty"`
+	Height    int    `json:"height,omitempty"`
 }

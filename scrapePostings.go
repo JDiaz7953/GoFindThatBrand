@@ -3,7 +3,7 @@ package main
 import (
 	"ClotheScrape/models"
 	"encoding/json"
-	"errors"
+	_"errors"
 	"fmt"
 	"io"
 	"log"
@@ -64,12 +64,15 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName, cate
 	//Performs the request to the site
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return models.Results{}, err
+		fmt.Println("request error ", err)
+		return scrapePostings(page, currentLowPrice, currentHighPrice, brandName, category )
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 400 {
-		return models.Results{}, errors.New("Key expired")
+		fmt.Println("Key expired")
+		WriteKey()
+		return scrapePostings(page, currentLowPrice, currentHighPrice, brandName, category )
 	} else if resp.StatusCode != 200 {
 		log.Fatal("Unexpected Status Code: ", resp.StatusCode)
 	} 
@@ -82,7 +85,11 @@ func scrapePostings(page, currentLowPrice, currentHighPrice int, brandName, cate
 	if err != nil {
 		log.Fatal("Error extracting data", err)
 	} else if len(root.Results) == 0 {
-		return models.Results{}, errors.New("No results")
+		// if the data is empty instead of ending the process is completely just simply refresh for a new 
+		fmt.Println("result empty error")
+		WriteKey()
+		return scrapePostings(page, currentLowPrice, currentHighPrice, brandName, category )
+
 	}
 
 	return root.Results[0], nil

@@ -24,8 +24,6 @@ FROM (SELECT price, designer_names, category_path
         FROM grailed_postings_db as c2  WHERE c2.designer_names = sqlc.arg(brand) AND c2.category_path = sqlc.arg(category))
         );
 
-
-
 -- name: FlagDeals :exec
 UPDATE grailed_postings_db
 SET flagged = CASE
@@ -39,6 +37,13 @@ INSERT INTO scrape_queue(
     )
     VALUES (?,?);
 
+-- name: GetFlaggedItem :many
+SELECT title, posting_url, price, image_url
+FROM grailed_postings_db
+WHERE category_path = sqlc.arg(category) 
+AND designer_names = sqlc.arg(brand)
+AND flagged = true
+ORDER BY price;
 
 -- name: ScrapingQueue :one
 SELECT id, designer_names, category FROM scrape_queue

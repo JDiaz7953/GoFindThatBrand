@@ -17,15 +17,14 @@ import (
 
 /*
 	------ What Should the program do? -------
-	- automate key renewal
-	- Scrape grailed site by a specified brand and category that rotate on a queue (Important!! makes it a lot more effecient and reliable)
-	- Set cron job to automate on a schedule
 	- send flagged postings to a discord bot to notify users
-	- recheck for price changes
 
 	------DONE-----
 	- Calculate the median price of a brands clothing/appearl (done)
 	- Use that median value calculated to flag clothing and appearl that falls below the median (done)
+	- automate key renewal
+	- Scrape grailed site by a specified brand and category that rotate on a queue (Important!! makes it a lot more effecient and reliable)
+	- recheck for price changes
 */
 
 /*
@@ -44,21 +43,17 @@ import (
 /*
 
 TO DOs:
- - Display a page of the possible brands that can be searched
- - those flagged ones get sent to the discord bot
- - recheck for price changes and update those price
- - Figure out how to establish using multiple different brands and clothing type
- - turn it into a cron job that waits for the key to be written and processes accordingly
+
+	Connecting the discord bot is not gonna be the issue figuring out how to get the data to the bot without overwhelming amout of notifications 
 
 */
 
 /*
 Current Task(s):
-	- write script so they is captured
-	- write the loop
-	- simplify loop
-	- recheck pricing
-	- Establish a connection with discord bot so it sends listing  Update notify_at (LAST)
+	- Establish a connection with discord bot so it sends listing that are flagged   Update notify_at (LAST)
+	- find a way to check for sold items that may be lingering in the database
+	- when a price is changed reset the notified flag
+	- how am i gonna not overload the discord bot with this data
 
 */
 
@@ -86,7 +81,7 @@ func main() {
 	for {
 
 		//sleep to avoid rate limiting
-		//time.Sleep(60 * time.Second)
+		time.Sleep(60 * time.Second)
 
 		//Get the category and brand next on the queue
 		currentJob, err := queries.ScrapingQueue(ctx)

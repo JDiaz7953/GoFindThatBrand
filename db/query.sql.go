@@ -109,6 +109,55 @@ func (q *Queries) FlagDeals(ctx context.Context, arg FlagDealsParams) error {
 	return err
 }
 
+const getFlaggedItem = `-- name: GetFlaggedItem :many
+SELECT title, posting_url, price, image_url
+FROM grailed_postings_db
+WHERE category_path = ?1 
+AND designer_names = ?2
+AND flagged = true
+ORDER BY price
+`
+
+type GetFlaggedItemParams struct {
+	Category string
+	Brand    string
+}
+
+type GetFlaggedItemRow struct {
+	Title      string
+	PostingUrl string
+	Price      int
+	ImageUrl   string
+}
+
+func (q *Queries) GetFlaggedItem(ctx context.Context, arg GetFlaggedItemParams) ([]GetFlaggedItemRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFlaggedItem, arg.Category, arg.Brand)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFlaggedItemRow
+	for rows.Next() {
+		var i GetFlaggedItemRow
+		if err := rows.Scan(
+			&i.Title,
+			&i.PostingUrl,
+			&i.Price,
+			&i.ImageUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertFilters = `-- name: InsertFilters :exec
 INSERT INTO scrape_queue(
     designer_names, category

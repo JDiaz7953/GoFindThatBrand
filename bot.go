@@ -3,12 +3,14 @@ package main
 import (
 	"ClotheScrape/db"
 	"context"
-	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/bwmarrin/discordgo"
+	"github.com/joho/godotenv"
 )
 
 func runBot(ctx context.Context, q *db.Queries, currentJob db.ScrapingQueueRow) error {
@@ -34,8 +36,8 @@ func runBot(ctx context.Context, q *db.Queries, currentJob db.ScrapingQueueRow) 
 	if err != nil {
 		return err
 	}
-
-	for _, fp := range FlaggedPostings {
+	amountFlagged := len(FlaggedPostings)
+	for i, fp := range FlaggedPostings {
 		messages := discordgo.MessageEmbed{
 			URL:         fp.PostingUrl,
 			Title:       fp.Title + " (" + fp.Category + ")",
@@ -45,7 +47,8 @@ func runBot(ctx context.Context, q *db.Queries, currentJob db.ScrapingQueueRow) 
 			},
 		}
 		dg.ChannelMessageSendEmbed(channelId, &messages)
-		time.Sleep(5 * time.Second)
+		fmt.Println(i, "/", amountFlagged)
+		time.Sleep(10 * time.Second)
 	}
 
 	return nil

@@ -44,16 +44,14 @@ import (
 
 TO DOs:
 
-	Connecting the discord bot is not gonna be the issue figuring out how to get the data to the bot without overwhelming amout of notifications
+	
 
 */
 
 /*
 Current Task(s):
-	- Establish a connection with discord bot so it sends listing that are flagged   Update notify_at (LAST)
-	- find a way to check for sold items that may be lingering in the database
-	- when a price is changed reset the notified flag
-	- how am i gonna not overload the discord bot with this data
+	- Check for sold items
+	-  add size to the discord bot
 
 */
 
@@ -96,8 +94,10 @@ func main() {
 		if err != nil {
 			continue
 		}
+
 		fmt.Println("Crawler succesfully processed: " + currentJob.DesignerNames + " and " + currentJob.Category + "!!")
 
+		fmt.Println("Calculating Median for " + currentJob.DesignerNames + " and " + currentJob.Category + "....")
 		//After all the data is in the database calculate the median and pass the decimal value to medianPrice
 		processMedian, err := queries.CalculateMedianPriceOfBrand(ctx, db.CalculateMedianPriceOfBrandParams{
 			Brand:    currentJob.DesignerNames,
@@ -136,7 +136,9 @@ func main() {
 		err = runBot(ctx, queries, currentJob)
 		if err != nil {
 			fmt.Println("Error sending data to discord channel")
+			continue
 		}
+		fmt.Println("All messages processed Succesfully to GoodGrailed bot!!")
 
 	}
 
